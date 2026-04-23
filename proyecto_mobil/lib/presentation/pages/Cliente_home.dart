@@ -1,36 +1,64 @@
 import 'package:flutter/material.dart';
-import '../../presentation/pages/appointments.dart';
-import '../../presentation/pages/profile.dart';
+import '../../core/theme/app_theme.dart';
+import 'appointments.dart';
+import 'profile.dart';
 
-class ClienteHome extends StatefulWidget {
-  const ClienteHome({super.key});
+class ClienteHomeScreen extends StatefulWidget {
+  const ClienteHomeScreen({super.key});
 
   @override
-  State<ClienteHome> createState() => _ClienteHomeState();
+  State<ClienteHomeScreen> createState() => _ClienteHomeScreenState();
 }
 
-class _ClienteHomeState extends State<ClienteHome> {
-  int index = 0;
+class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
+  int _index = 0;
 
-  final screens = [
-    AppointmentsScreen(), // tu vista calendario
-    ProfileScreen(),      // tu vista perfil
+  final List<Widget> _screens = [
+    AppointmentsScreen(),
+    const NewAppointmentScreen(),
+    const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: screens[index],
+      body: _screens[_index],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        selectedItemColor: Colors.teal,
-        unselectedItemColor: Colors.grey,
-        onTap: (i) => setState(() => index = i),
+        currentIndex: _index,
+        selectedItemColor: AppTheme.accent,
+        unselectedItemColor: AppTheme.muted,
+        onTap: (i) => setState(() => _index = i),
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month), label: "Mis Citas"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
+            icon: Icon(Icons.calendar_month),
+            label: "Mis Citas",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle),
+            label: "Nueva Cita",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: "Perfil",
+          ),
         ],
+      ),
+    );
+  }
+}
+
+// Pantalla para crear nueva cita (placeholder)
+class NewAppointmentScreen extends StatelessWidget {
+  const NewAppointmentScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nueva Cita'),
+      ),
+      body: const Center(
+        child: Text('Formulario para crear nueva cita'),
       ),
     );
   }

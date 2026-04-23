@@ -1,245 +1,261 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../core/services/api_service.dart';
+import '../../core/constants/api_constants.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/models/client_model.dart';
 
-class ClientScreen extends StatelessWidget {
+class ClientScreen extends StatefulWidget {
   const ClientScreen({super.key});
 
-  static const List<Map<String, dynamic>> frequentClients = [
-    {"initials": "IV", "name": "Isabel"},
-    {"initials": "MG", "name": "María"},
-    {"initials": "MÁC", "name": "Miguel"},
-    {"initials": "JH", "name": "Juan"},
-  ];
+  @override
+  State<ClientScreen> createState() => _ClientScreenState();
+}
 
-  static const List<Map<String, dynamic>> clients = [
-    {
-      "initials": "AM",
-      "name": "Ana Martínez",
-      "visits": 14,
-      "email": "ana@gmail.com",
-      "phone": "3001234567"
-    },
-    {
-      "initials": "CL",
-      "name": "Carlos López",
-      "visits": 2,
-      "email": "carlos@gmail.com",
-      "phone": "3009876543"
-    },
-    {
-      "initials": "LP",
-      "name": "Laura Pérez",
-      "visits": 8,
-      "email": "laura@gmail.com",
-      "phone": "3011112222"
-    },
-    {
-      "initials": "DR",
-      "name": "Diego Ramírez",
-      "visits": 1,
-      "email": "diego@gmail.com",
-      "phone": "3024445566"
-    },
-  ];
+class _ClientScreenState extends State<ClientScreen> {
+  List<ClientModel> _clients = [];
+  List<ClientModel> _filteredClients = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClients();
+    _searchController.addListener(_filterClients);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadClients() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await ApiService.get(ApiConstants.clients);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _clients =
+              data.map((json) => ClientModel.fromJson(json)).toList();
+          _filteredClients = _clients;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Error al cargar clientes');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _filterClients() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredClients = query.isEmpty
+          ? _clients
+          : _clients.where((c) {
+              return c.nombreCompleto.toLowerCase().contains(query) ||
+                  c.correo.toLowerCase().contains(query) ||
+                  c.telefono.contains(query);
+            }).toList();
+    });
+  }
+
+  Future<void> _deleteClient(int id) async {
+    final confirm = await _showConfirmDialog('¿Eliminar este cliente?');
+    if (!confirm) return;
+    try {
+      final response =
+          await ApiService.delete(ApiConstants.clientDetail(id));
+      if (response.statusCode == 200) {
+        _showSuccess('Cliente eliminado');
+        _loadClients();
+      } else {
+        throw Exception('Error al eliminar');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  void _showSuccess(String msg) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: AppTheme.colorSuccess),
+      );
+
+  void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: AppTheme.destructive),
+      );
+
+  Future<bool> _showConfirmDialog(String message) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar'),
+        content: Text(message),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirmar')),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF7F9FA),
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline,
+                  size: 60, color: AppTheme.destructive),
+              const SizedBox(height: 16),
+              Text(_errorMessage!),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                  onPressed: _loadClients,
+                  child: const Text('Reintentar')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: ClientScreenBody(),
+        child: RefreshIndicator(
+          onRefresh: _loadClients,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 20),
+                _buildSearchBar(),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: _filteredClients.isEmpty
+                      ? const Center(
+                          child: Text('No se encontraron clientes',
+                              style: TextStyle(color: AppTheme.muted)))
+                      : ListView.builder(
+                          itemCount: _filteredClients.length,
+                          itemBuilder: (context, index) =>
+                              _buildClientCard(_filteredClients[index]),
+                        ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-}
 
-class ClientScreenBody extends StatelessWidget {
-  const ClientScreenBody({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: const [
-        ClientHeader(),
-        SizedBox(height: 20),
-        SearchBarClients(),
-        SizedBox(height: 20),
-        FrequentClientsSection(),
-        SizedBox(height: 20),
-        ClientListSection(),
-        SizedBox(height: 60),
-      ],
-    );
-  }
-}
-
-// ---------------- HEADER ----------------
-
-class ClientHeader extends StatelessWidget {
-  const ClientHeader({super.key});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHeader() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFADEBD3), Color(0xFF86DDBA)],
+          colors: [AppTheme.accent, AppTheme.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Clientes",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(height: 5),
-          Text(
-            "50 clientes registrados",
-            style: TextStyle(color: Colors.white70),
-          ),
+          const Text('Clientes',
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
+          const SizedBox(height: 5),
+          Text('${_clients.length} clientes registrados',
+              style: const TextStyle(color: Colors.white70)),
         ],
       ),
     );
   }
-}
 
-// ---------------- SEARCH BAR ----------------
-
-class SearchBarClients extends StatelessWidget {
-  const SearchBarClients({super.key});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.card,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2))
         ],
       ),
-      child: const TextField(
-        decoration: InputDecoration(
-          hintText: "Buscar clientes...",
+      child: TextField(
+        controller: _searchController,
+        decoration: const InputDecoration(
+          hintText: 'Buscar clientes...',
           border: InputBorder.none,
-          icon: Icon(Icons.search, color: Colors.grey),
+          icon: Icon(Icons.search, color: AppTheme.muted),
         ),
       ),
     );
   }
-}
 
-// ---------------- FREQUENT CLIENTS ----------------
-
-class FrequentClientsSection extends StatelessWidget {
-  const FrequentClientsSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Clientes Frecuentes",
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: ClientScreen.frequentClients
-              .map((c) => FrequentClientItem(client: c))
-              .toList(),
-        )
-      ],
-    );
-  }
-}
-
-class FrequentClientItem extends StatelessWidget {
-  final Map<String, dynamic> client;
-  const FrequentClientItem({super.key, required this.client});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: const Color(0xFF1E9E6A),
-          child: Text(
-            client["initials"],
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          client["name"],
-          style: const TextStyle(fontSize: 13),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------- CLIENT LIST ----------------
-
-class ClientListSection extends StatelessWidget {
-  const ClientListSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: ClientScreen.clients
-          .map((c) => ClientCard(client: c))
-          .toList(),
-    );
-  }
-}
-
-class ClientCard extends StatelessWidget {
-  final Map<String, dynamic> client;
-  const ClientCard({super.key, required this.client});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildClientCard(ClientModel client) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.card,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 5,
+              offset: const Offset(0, 3))
         ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
+            CircleAvatar(
             radius: 22,
-            backgroundColor: const Color(0xFFDFF4EB),
+            backgroundColor: AppTheme.accent.withOpacity(0.2),
             child: Text(
-              client["initials"],
-              style: const TextStyle(color: Colors.teal),
+              client.nombre.isNotEmpty && client.apellido.isNotEmpty
+                  ? client.nombre[0].toUpperCase() + client.apellido[0].toUpperCase()
+                  : client.nombre.isNotEmpty
+                      ? client.nombre[0].toUpperCase()
+                      : '?',
+              style: const TextStyle(
+                  color: AppTheme.accent, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 14),
@@ -247,97 +263,105 @@ class ClientCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  client["name"],
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Text(
-                  "${client["visits"]} visitas",
-                  style: const TextStyle(color: Colors.grey),
-                ),
+                Text(client.nombreCompleto,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(client.correo,
+                    style: const TextStyle(
+                        color: AppTheme.muted, fontSize: 13)),
               ],
             ),
           ),
           GestureDetector(
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                shape: const RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(25)),
-                ),
-                builder: (_) => ClientDetailCard(client: client),
-              );
-            },
-            child: const Icon(Icons.more_horiz, color: Colors.grey),
+            onTap: () => _showClientDetail(client),
+            child: const Icon(Icons.more_horiz, color: AppTheme.muted),
           ),
         ],
       ),
     );
   }
-}
 
-// ---------------- BOTTOM CARD ----------------
-
-class ClientDetailCard extends StatelessWidget {
-  final Map<String, dynamic> client;
-  const ClientDetailCard({super.key, required this.client});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(25),
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 60,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(10),
+  void _showClientDetail(ClientModel client) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 60,
+                height: 5,
+                decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            client["name"],
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 22),
-          ),
-          const SizedBox(height: 15),
-          _dataTile(Icons.email, "Email", client["email"]),
-          _dataTile(Icons.phone, "Teléfono", client["phone"]),
-          _dataTile(Icons.history, "Visitas", "${client["visits"]}"),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+            Text(client.nombreCompleto,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 22)),
+            const SizedBox(height: 15),
+            _buildInfoTile(Icons.email, 'Email', client.correo),
+            _buildInfoTile(Icons.phone, 'Teléfono', client.telefono),
+            _buildInfoTile(
+                Icons.check_circle, 'Estado', client.estado),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showError('Edición próximamente');
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Editar'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.colorEdit),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _deleteClient(client.id);
+                    },
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Eliminar'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.destructive),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _dataTile(IconData icon, String title, String value) {
+  Widget _buildInfoTile(IconData icon, String title, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F5F4),
-        borderRadius: BorderRadius.circular(12),
-      ),
+          color: AppTheme.background,
+          borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Icon(icon, color: Colors.teal),
+          Icon(icon, color: AppTheme.accent),
           const SizedBox(width: 10),
-          Text("$title: $value",
+          Text('$title: ',
               style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              )),
+                  fontSize: 16, fontWeight: FontWeight.w500)),
+          Expanded(
+              child: Text(value, style: const TextStyle(fontSize: 16))),
         ],
       ),
     );

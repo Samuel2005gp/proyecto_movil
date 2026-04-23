@@ -1,79 +1,182 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../core/services/api_service.dart';
+import '../../core/constants/api_constants.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/models/sale_model.dart';
 
-class SaleScreen extends StatelessWidget {
-   SaleScreen({super.key});
-  final List<Map<String, dynamic>> sales = [
-    {
-      "name": "Ana Martínez",
-      "service": "Masaje Relajante",
-      "time": "10:00 AM",
-      "method": "Tarjeta",
-      "price": 45,
-      "status": "Pagado",
-      "statusColor": Color(0xFFB7EED5),
-      "statusTextColor": Color(0xFF1E9E6A),
-    },
-    {
-      "name": "Carlos López",
-      "service": "Facial Hidratante + Manicure",
-      "time": "11:30 AM",
-      "method": "Efectivo",
-      "price": 75,
-      "status": "Pagado",
-      "statusColor": Color(0xFFB7EED5),
-      "statusTextColor": Color(0xFF1E9E6A),
-    },
-    {
-      "name": "Laura Pérez",
-      "service": "Pedicure Spa",
-      "time": "2:00 PM",
-      "method": "Tarjeta",
-      "price": 35,
-      "status": "Pendiente",
-      "statusColor": Color(0xFFFFE1C2),
-      "statusTextColor": Color(0xFFC67A2E),
-    },
-    {
-      "name": "Diego Ramírez",
-      "service": "Masaje Terapéutico",
-      "time": "3:30 PM",
-      "method": "Transferencia",
-      "price": 65,
-      "status": "Pagado",
-      "statusColor": Color(0xFFB7EED5),
-      "statusTextColor": Color(0xFF1E9E6A),
-    },
-  ];
+class SaleScreen extends StatefulWidget {
+  const SaleScreen({super.key});
+
+  @override
+  State<SaleScreen> createState() => _SaleScreenState();
+}
+
+class _SaleScreenState extends State<SaleScreen> {
+  List<SaleModel> _sales = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  double _totalToday = 0;
+  double _totalMonth = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSales();
+  }
+
+  Future<void> _loadSales() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await ApiService.get(ApiConstants.sales);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _sales = data.map((json) => SaleModel.fromJson(json)).toList();
+          _calculateTotals();
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Error al cargar ventas');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _calculateTotals() {
+    final now = DateTime.now();
+    _totalToday = 0;
+    _totalMonth = 0;
+
+    for (var sale in _sales) {
+      final saleDate = sale.createdAt;
+      if (saleDate.year == now.year &&
+          saleDate.month == now.month &&
+          saleDate.day == now.day) {
+        _totalToday += sale.total;
+      }
+      if (saleDate.year == now.year && saleDate.month == now.month) {
+        _totalMonth += sale.total;
+      }
+    }
+  }
+
+  Future<void> _deleteSale(int id) async {
+    final confirm = await _showConfirmDialog('¿Eliminar esta venta?');
+    if (!confirm) return;
+
+    try {
+      final response = await ApiService.delete(ApiConstants.saleDetail(id));
+      if (response.statusCode == 200) {
+        _showSuccess('Venta eliminada exitosamente');
+        _loadSales();
+      } else {
+        throw Exception('Error al eliminar venta');
+      }
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppTheme.colorSuccess),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
+    );
+  }
+
+  Future<bool> _showConfirmDialog(String message) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 60, color: AppTheme.destructive),
+              const SizedBox(height: 16),
+              Text(_errorMessage!),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadSales,
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FA),
+      backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _header(),
-            const SizedBox(height: 25),
-            _summaryCards(),
-            const SizedBox(height: 20),
-            _filterButtons(),
-            const SizedBox(height: 20),
-            _salesList(),
-            const SizedBox(height: 50),
-          ],
+        child: RefreshIndicator(
+          onRefresh: _loadSales,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 25),
+              _buildSummaryCards(),
+              const SizedBox(height: 20),
+              _buildFilterButtons(),
+              const SizedBox(height: 20),
+              _buildSalesList(),
+              const SizedBox(height: 50),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ---------------- HEADER ----------------
-  Widget _header() {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFADEBD3), Color(0xFF86DDBA)],
+        gradient: const LinearGradient(
+          colors: [AppTheme.accent, AppTheme.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -84,183 +187,162 @@ class SaleScreen extends StatelessWidget {
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 "Ventas",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               Text(
-                "3 transacciones hoy",
-                style: TextStyle(color: Colors.white70),
+                "${_sales.length} transacciones",
+                style: const TextStyle(color: Colors.white70),
               ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.add, color: Colors.teal.shade700),
+          const CircleAvatar(
+            backgroundColor: Colors.white,
+            child: Icon(Icons.add, color: AppTheme.accent),
           ),
         ],
       ),
     );
   }
 
-  // ---------------- SUMMARY CARDS ----------------
-  Widget _summaryCards() {
+  Widget _buildSummaryCards() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _summaryCard(Icons.attach_money, "Hoy", "\$155"),
-        _summaryCard(Icons.trending_up, "Este mes", "\$345"),
+        Expanded(child: _buildSummaryCard(Icons.attach_money, "Hoy", "\$${_totalToday.toStringAsFixed(0)}")),
+        const SizedBox(width: 10),
+        Expanded(child: _buildSummaryCard(Icons.trending_up, "Este mes", "\$${_totalMonth.toStringAsFixed(0)}")),
       ],
     );
   }
 
-  Widget _summaryCard(IconData icon, String label, String value) {
-    return Expanded(
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 5),
-        padding: EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Color(0xD9FFFFFF), // white con 85% opacity
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: Colors.teal, size: 30),
-            SizedBox(height: 8),
-            Text(label, style: TextStyle(fontSize: 13, color: Colors.grey)),
-            SizedBox(height: 3),
-            Text(
-              value,
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
+  Widget _buildSummaryCard(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppTheme.accent, size: 30),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.muted)),
+          const SizedBox(height: 3),
+          Text(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
 
-  // ---------------- FILTER + EXPORT BUTTONS ----------------
-  Widget _filterButtons() {
+  Widget _buildFilterButtons() {
     return Row(
       children: [
-        Expanded(child: _roundedButton(Icons.filter_list, "Filtrar")),
-        SizedBox(width: 10),
-        Expanded(child: _roundedButton(Icons.upload, "Exportar")),
+        Expanded(child: _buildRoundedButton(Icons.filter_list, "Filtrar")),
+        const SizedBox(width: 10),
+        Expanded(child: _buildRoundedButton(Icons.upload, "Exportar")),
       ],
     );
   }
 
-  Widget _roundedButton(IconData icon, String label) {
+  Widget _buildRoundedButton(IconData icon, String label) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.card,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 18, color: Colors.grey.shade700),
-          SizedBox(width: 8),
-          Text(label, style: TextStyle(fontSize: 14)),
+          Icon(icon, size: 18, color: AppTheme.muted),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
   }
 
-  // ---------------- SALES LIST ----------------
-  Widget _salesList() {
-    return Column(children: sales.map((s) => _saleCard(s)).toList());
+  Widget _buildSalesList() {
+    if (_sales.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Text('No hay ventas registradas', style: TextStyle(color: AppTheme.muted)),
+        ),
+      );
+    }
+    return Column(children: _sales.map((s) => _buildSaleCard(s)).toList());
   }
 
-  Widget _saleCard(Map<String, dynamic> sale) {
+  Widget _buildSaleCard(SaleModel sale) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.card,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 3)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 5, offset: const Offset(0, 3)),
         ],
       ),
       child: Row(
         children: [
-          // Icon avatar
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Color(0xFFE1F3EC),
+              color: AppTheme.accent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.shopping_bag, color: Colors.teal, size: 28),
+            child: const Icon(Icons.shopping_bag, color: AppTheme.accent, size: 28),
           ),
-
-          SizedBox(width: 14),
-
-          // Info
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  sale["name"],
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  sale.clienteNombre ?? 'Cliente',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  sale["service"],
-                  style: TextStyle(color: Colors.grey.shade700),
+                  sale.servicioNombre ?? 'Servicio',
+                  style: const TextStyle(color: AppTheme.muted),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  "${sale["time"]}   •   ${sale["method"]}",
-                  style: TextStyle(color: Colors.grey),
+                  "${_formatDate(sale.createdAt)}   •   ${sale.metodoPago}",
+                  style: const TextStyle(color: AppTheme.muted, fontSize: 12),
                 ),
               ],
             ),
           ),
-
-          // Price + status
           Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                "\$${sale["price"]}",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal,
-                ),
+                "\$${sale.total.toStringAsFixed(0)}",
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accent, fontSize: 16),
               ),
               const SizedBox(height: 4),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: sale["statusColor"],
+                  color: _getStatusColor(sale.estado).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  sale["status"],
+                  sale.estado,
                   style: TextStyle(
-                    color: sale["statusTextColor"],
+                    color: _getStatusColor(sale.estado),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -268,8 +350,34 @@ class SaleScreen extends StatelessWidget {
               ),
             ],
           ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: AppTheme.destructive),
+            onPressed: () => _deleteSale(sale.id),
+          ),
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+    }
+    return "${date.day}/${date.month}/${date.year}";
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completada':
+      case 'pagado':
+        return AppTheme.colorSuccess;
+      case 'pendiente':
+        return AppTheme.colorEdit;
+      case 'cancelada':
+        return AppTheme.destructive;
+      default:
+        return AppTheme.muted;
+    }
   }
 }
