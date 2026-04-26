@@ -5,6 +5,7 @@ import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snackbar_helper.dart';
 import '../../core/models/user_model.dart';
 import 'login.dart';
 
@@ -260,9 +261,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await StorageService.saveUserName(
             '${_nombreCtrl.text.trim()} ${_apellidoCtrl.text.trim()}'.trim());
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Perfil actualizado correctamente'),
-            backgroundColor: AppTheme.colorSuccess));
+        SnackBarHelper.showSuccess(context, 'Perfil actualizado correctamente');
         Navigator.pop(context, true);
       } else {
         String errorMsg = 'Error ${response.statusCode}';
@@ -273,9 +272,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           errorMsg = response.body.isNotEmpty ? response.body : errorMsg;
         }
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(errorMsg), backgroundColor: AppTheme.destructive,
-            duration: const Duration(seconds: 5)));
+        SnackBarHelper.showError(context, errorMsg);
       }
     } catch (e) {
       if (!mounted) return;
@@ -365,8 +362,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           {'currentPassword': _currentCtrl.text, 'newPassword': _newCtrl.text});
       if (response.statusCode == 200) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Contrasena actualizada'), backgroundColor: AppTheme.colorSuccess));
+        SnackBarHelper.showSuccess(context, 'Contrasena actualizada');
         Navigator.pop(context);
       } else {
         String errorMsg = 'Error ${response.statusCode}';
@@ -375,8 +371,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           errorMsg = error['message']?.toString() ?? errorMsg;
         } catch (_) {}
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(errorMsg), backgroundColor: AppTheme.destructive));
+        SnackBarHelper.showError(context, errorMsg);
       }
     } catch (e) {
       if (!mounted) return;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snackbar_helper.dart';
 import '../../core/models/sale_model.dart';
 
 class SaleScreen extends StatefulWidget {
@@ -99,9 +100,7 @@ class _SaleScreenState extends State<SaleScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
-    );
+    SnackBarHelper.showError(context, message);
   }
 
   Future<bool> _showConfirmDialog(String message) async {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snackbar_helper.dart';
 import '../../core/models/user_model.dart';
 
 class UsersScreen extends StatefulWidget {
@@ -115,11 +116,9 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
-  void _showSuccess(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppTheme.colorSuccess));
+  void _showSuccess(String msg) => SnackBarHelper.showSuccess(context, msg);
 
-  void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppTheme.destructive));
+  void _showError(String msg) => SnackBarHelper.showError(context, msg);
 
   Future<bool> _showConfirmDialog(String msg) async {
     final result = await showDialog<bool>(
@@ -458,10 +457,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
         throw Exception(error['message'] ?? 'Error al guardar');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(e.toString()), backgroundColor: AppTheme.destructive),
-      );
+      SnackBarHelper.showError(context, e.toString());
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

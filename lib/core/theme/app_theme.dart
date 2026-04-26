@@ -23,7 +23,7 @@ class AppTheme {
   static const Color colorView = Color(0xFF60A5FA); // azul â€” ver
   static const Color colorEdit = Color(0xFFFBBF24); // amarillo â€” editar
   static const Color colorDelete = Color(0xFFF87171); // rojo suave â€” eliminar
-  static const Color colorSuccess = Color(0xFF1A3A2A); // teal â€” éxito
+  static const Color colorSuccess = Color(0xFF0F766E); // teal oscuro - exito
   static const Color colorPurple =
       Color(0xFFA78BFA); // púrpura â€” badges/stats
 

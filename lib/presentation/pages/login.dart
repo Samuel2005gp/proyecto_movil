@@ -5,6 +5,7 @@ import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snackbar_helper.dart';
 import 'admin_home.dart';
 import 'Cliente_home.dart';
 import 'empleado_home.dart';
@@ -102,14 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.destructive,
-      ),
-    );
-  }
+  void _showError(String message) => SnackBarHelper.showError(context, message);
 
   @override
   Widget build(BuildContext context) {

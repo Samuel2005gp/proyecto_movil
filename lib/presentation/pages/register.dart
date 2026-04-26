@@ -1,9 +1,10 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snackbar_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -58,40 +59,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cuenta creada exitosamente. Inicia sesión.'),
-            backgroundColor: AppTheme.colorSuccess,
-          ),
-        );
+        SnackBarHelper.showSuccess(context, 'Cuenta creada exitosamente. Inicia sesiÃ³n.');
         Navigator.pop(context);
       } else {
         final error = jsonDecode(response.body);
         _showError(error['message'] ?? 'Error al crear la cuenta');
       }
     } catch (e) {
-      _showError('Error de conexión: ${e.toString()}');
+      _showError('Error de conexiÃ³n: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.destructive,
-      ),
-    );
+    SnackBarHelper.showError(context, message);
   }
 
-  // ── Validadores ──────────────────────────────────────────────────────────
+  // â”€â”€ Validadores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   String? _validateNombre(String? v) {
     if (v == null || v.trim().isEmpty) return 'El nombre es requerido';
-    if (v.trim().length < 2) return 'Mínimo 2 caracteres';
-    if (v.trim().length > 50) return 'Máximo 50 caracteres';
-    if (!RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$").hasMatch(v.trim())) {
+    if (v.trim().length < 2) return 'MÃ­nimo 2 caracteres';
+    if (v.trim().length > 50) return 'MÃ¡ximo 50 caracteres';
+    if (!RegExp(r"^[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]+$").hasMatch(v.trim())) {
       return 'Solo se permiten letras';
     }
     return null;
@@ -99,9 +90,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _validateApellido(String? v) {
     if (v == null || v.trim().isEmpty) return 'El apellido es requerido';
-    if (v.trim().length < 2) return 'Mínimo 2 caracteres';
-    if (v.trim().length > 50) return 'Máximo 50 caracteres';
-    if (!RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$").hasMatch(v.trim())) {
+    if (v.trim().length < 2) return 'MÃ­nimo 2 caracteres';
+    if (v.trim().length > 50) return 'MÃ¡ximo 50 caracteres';
+    if (!RegExp(r"^[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]+$").hasMatch(v.trim())) {
       return 'Solo se permiten letras';
     }
     return null;
@@ -110,44 +101,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _validateCorreo(String? v) {
     if (v == null || v.trim().isEmpty) return 'El correo es requerido';
     if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$').hasMatch(v.trim())) {
-      return 'Ingresa un correo válido (ej: usuario@correo.com)';
+      return 'Ingresa un correo vÃ¡lido (ej: usuario@correo.com)';
     }
     return null;
   }
 
   String? _validateTelefono(String? v) {
-    if (v == null || v.trim().isEmpty) return 'El teléfono es requerido';
+    if (v == null || v.trim().isEmpty) return 'El telÃ©fono es requerido';
     final digits = v.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 7) return 'Mínimo 7 dígitos';
-    if (digits.length > 15) return 'Máximo 15 dígitos';
+    if (digits.length < 7) return 'MÃ­nimo 7 dÃ­gitos';
+    if (digits.length > 15) return 'MÃ¡ximo 15 dÃ­gitos';
     return null;
   }
 
   String? _validateNumDoc(String? v) {
     if (v == null || v.trim().isEmpty)
-      return 'El número de documento es requerido';
+      return 'El nÃºmero de documento es requerido';
     if (!RegExp(r'^[a-zA-Z0-9\-]+$').hasMatch(v.trim())) {
-      return 'Solo letras, números y guiones';
+      return 'Solo letras, nÃºmeros y guiones';
     }
-    if (v.trim().length < 4) return 'Mínimo 4 caracteres';
-    if (v.trim().length > 20) return 'Máximo 20 caracteres';
+    if (v.trim().length < 4) return 'MÃ­nimo 4 caracteres';
+    if (v.trim().length > 20) return 'MÃ¡ximo 20 caracteres';
     return null;
   }
 
   String? _validatePassword(String? v) {
-    if (v == null || v.isEmpty) return 'La contraseña es requerida';
-    if (v.length < 6) return 'Mínimo 6 caracteres';
-    if (v.length > 50) return 'Máximo 50 caracteres';
+    if (v == null || v.isEmpty) return 'La contraseÃ±a es requerida';
+    if (v.length < 6) return 'MÃ­nimo 6 caracteres';
+    if (v.length > 50) return 'MÃ¡ximo 50 caracteres';
     if (!RegExp(r'[A-Za-z]').hasMatch(v))
       return 'Debe contener al menos una letra';
     if (!RegExp(r'[0-9]').hasMatch(v))
-      return 'Debe contener al menos un número';
+      return 'Debe contener al menos un nÃºmero';
     return null;
   }
 
   String? _validateConfirm(String? v) {
-    if (v == null || v.isEmpty) return 'Confirma tu contraseña';
-    if (v != _passwordCtrl.text) return 'Las contraseñas no coinciden';
+    if (v == null || v.isEmpty) return 'Confirma tu contraseÃ±a';
+    if (v != _passwordCtrl.text) return 'Las contraseÃ±as no coinciden';
     return null;
   }
 
@@ -178,7 +169,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Ícono
+                    // Ãcono
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -194,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: Theme.of(context).textTheme.displaySmall),
                     const SizedBox(height: 6),
                     Text(
-                      'Regístrate para agendar tus citas',
+                      'RegÃ­strate para agendar tus citas',
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
@@ -203,46 +194,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 28),
 
-                    // ── Nombre ──────────────────────────────────────────
+                    // â”€â”€ Nombre â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     TextFormField(
                       controller: _nombreCtrl,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                            RegExp(r'[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]')),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Nombre *',
                         prefixIcon: Icon(Icons.person_outline),
-                        hintText: 'Ej: María',
+                        hintText: 'Ej: MarÃ­a',
                       ),
                       validator: _validateNombre,
                     ),
                     const SizedBox(height: 14),
 
-                    // ── Apellido ─────────────────────────────────────────
+                    // â”€â”€ Apellido â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     TextFormField(
                       controller: _apellidoCtrl,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                            RegExp(r'[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]')),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Apellido *',
                         prefixIcon: Icon(Icons.person_2_outlined),
-                        hintText: 'Ej: García',
+                        hintText: 'Ej: GarcÃ­a',
                       ),
                       validator: _validateApellido,
                     ),
                     const SizedBox(height: 14),
 
-                    // ── Correo ───────────────────────────────────────────
+                    // â”€â”€ Correo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     TextFormField(
                       controller: _correoCtrl,
                       keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
-                        labelText: 'Correo electrónico *',
+                        labelText: 'Correo electrÃ³nico *',
                         prefixIcon: Icon(Icons.email_outlined),
                         hintText: 'usuario@correo.com',
                       ),
@@ -250,7 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // ── Teléfono ─────────────────────────────────────────
+                    // â”€â”€ TelÃ©fono â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     TextFormField(
                       controller: _telefonoCtrl,
                       keyboardType: TextInputType.phone,
@@ -259,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             RegExp(r'[\d\+\-\s]')),
                       ],
                       decoration: const InputDecoration(
-                        labelText: 'Teléfono *',
+                        labelText: 'TelÃ©fono *',
                         prefixIcon: Icon(Icons.phone_outlined),
                         hintText: 'Ej: 3001234567',
                       ),
@@ -267,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // ── Tipo de documento ────────────────────────────────
+                    // â”€â”€ Tipo de documento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     DropdownButtonFormField<String>(
                       initialValue: _tipoDocSelected,
                       decoration: const InputDecoration(
@@ -276,9 +267,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       items: const [
                         DropdownMenuItem(
-                            value: 'CC', child: Text('Cédula de Ciudadanía')),
+                            value: 'CC', child: Text('CÃ©dula de CiudadanÃ­a')),
                         DropdownMenuItem(
-                            value: 'CE', child: Text('Cédula de Extranjería')),
+                            value: 'CE', child: Text('CÃ©dula de ExtranjerÃ­a')),
                         DropdownMenuItem(
                             value: 'TI', child: Text('Tarjeta de Identidad')),
                         DropdownMenuItem(value: 'PA', child: Text('Pasaporte')),
@@ -291,7 +282,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // ── Número de documento ──────────────────────────────
+                    // â”€â”€ NÃºmero de documento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     TextFormField(
                       controller: _numDocCtrl,
                       keyboardType: TextInputType.text,
@@ -300,7 +291,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             RegExp(r'[a-zA-Z0-9\-]')),
                       ],
                       decoration: const InputDecoration(
-                        labelText: 'Número de documento *',
+                        labelText: 'NÃºmero de documento *',
                         prefixIcon: Icon(Icons.numbers_outlined),
                         hintText: 'Ej: 1234567890',
                       ),
@@ -308,14 +299,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // ── Contraseña ───────────────────────────────────────
+                    // â”€â”€ ContraseÃ±a â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     TextFormField(
                       controller: _passwordCtrl,
                       obscureText: !_showPassword,
                       decoration: InputDecoration(
-                        labelText: 'Contraseña *',
+                        labelText: 'ContraseÃ±a *',
                         prefixIcon: const Icon(Icons.lock_outline),
-                        hintText: 'Mínimo 6 caracteres con letras y números',
+                        hintText: 'MÃ­nimo 6 caracteres con letras y nÃºmeros',
                         suffixIcon: IconButton(
                           icon: Icon(_showPassword
                               ? Icons.visibility_off
@@ -326,7 +317,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       validator: _validatePassword,
                       onChanged: (_) {
-                        // Revalida confirmar cuando cambia la contraseña
+                        // Revalida confirmar cuando cambia la contraseÃ±a
                         if (_confirmCtrl.text.isNotEmpty) {
                           _formKey.currentState?.validate();
                         }
@@ -334,14 +325,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // ── Confirmar contraseña ─────────────────────────────
+                    // â”€â”€ Confirmar contraseÃ±a â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     TextFormField(
                       controller: _confirmCtrl,
                       obscureText: !_showConfirm,
                       decoration: InputDecoration(
-                        labelText: 'Confirmar contraseña *',
+                        labelText: 'Confirmar contraseÃ±a *',
                         prefixIcon: const Icon(Icons.lock_outline),
-                        hintText: 'Repite tu contraseña',
+                        hintText: 'Repite tu contraseÃ±a',
                         suffixIcon: IconButton(
                           icon: Icon(_showConfirm
                               ? Icons.visibility_off
@@ -368,7 +359,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ── Botón registrar ──────────────────────────────────
+                    // â”€â”€ BotÃ³n registrar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -388,18 +379,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 16),
 
-                    // ── Volver al login ──────────────────────────────────
+                    // â”€â”€ Volver al login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '¿Ya tienes cuenta? ',
+                          'Â¿Ya tienes cuenta? ',
                           style: TextStyle(color: AppTheme.muted, fontSize: 14),
                         ),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Text(
-                            'Inicia sesión',
+                            'Inicia sesiÃ³n',
                             style: TextStyle(
                               color: AppTheme.primary,
                               fontSize: 14,

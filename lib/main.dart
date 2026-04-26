@@ -156,6 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   String _userName = '';
+  String _userRole = '';
   int _citasHoy = 0;
   int _totalClientes = 0;
   double _ventasHoy = 0;
@@ -174,9 +175,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      // Cargar nombre del usuario
+      // Cargar nombre y rol del usuario
       final userName = await StorageService.getUserName();
+      final role = await StorageService.getRole();
       _userName = userName ?? 'Usuario';
+      _userRole = role ?? '';
 
       // Cargar estadísticas en paralelo
       await Future.wait([
@@ -433,7 +436,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHeader() {
-    // Saludo según la hora del día
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Buenos días'
@@ -441,8 +443,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? 'Buenas tardes'
             : 'Buenas noches';
 
-    // Mostrar solo el primer nombre
-    final firstName = _userName.split(' ').first;
+    // Iniciales del nombre completo
+    final parts =
+        _userName.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    final initials = parts.length >= 2
+        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+        : parts.isNotEmpty
+            ? parts[0][0].toUpperCase()
+            : 'U';
+
+    // Etiqueta del rol
+    final rolLabel = _userRole == 'Admin'
+        ? 'Administrador'
+        : _userRole == 'Cliente'
+            ? 'Cliente'
+            : _userRole.isNotEmpty
+                ? _userRole
+                : 'Usuario';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -462,38 +479,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   '$greeting,',
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: Colors.white70,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  firstName.isNotEmpty ? firstName : 'Usuario',
+                  _userName.isNotEmpty ? _userName : 'Usuario',
                   style: const TextStyle(
-                    fontSize: 26,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _userName.contains(' ')
-                      ? _userName.split(' ').skip(1).join(' ')
-                      : '',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white60,
-                    fontWeight: FontWeight.w400,
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    rolLabel,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          // Avatar con iniciales
+          const SizedBox(width: 12),
           Container(
-            width: 48,
-            height: 48,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
@@ -502,10 +526,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Center(
               child: Text(
-                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                initials,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
               ),

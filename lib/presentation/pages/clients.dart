@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/snackbar_helper.dart';
 import '../../core/models/client_model.dart';
 
 class ClientScreen extends StatefulWidget {
@@ -44,8 +45,7 @@ class _ClientScreenState extends State<ClientScreen> {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
-          _clients =
-              data.map((json) => ClientModel.fromJson(json)).toList();
+          _clients = data.map((json) => ClientModel.fromJson(json)).toList();
           _filteredClients = _clients;
           _isLoading = false;
         });
@@ -77,8 +77,7 @@ class _ClientScreenState extends State<ClientScreen> {
     final confirm = await _showConfirmDialog('Â¿Eliminar este cliente?');
     if (!confirm) return;
     try {
-      final response =
-          await ApiService.delete(ApiConstants.clientDetail(id));
+      final response = await ApiService.delete(ApiConstants.clientDetail(id));
       if (response.statusCode == 200) {
         _showSuccess('Cliente eliminado');
         _loadClients();
@@ -90,13 +89,8 @@ class _ClientScreenState extends State<ClientScreen> {
     }
   }
 
-  void _showSuccess(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: AppTheme.colorSuccess),
-      );
-
-  void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: AppTheme.destructive),
-      );
+  void _showSuccess(String msg) => SnackBarHelper.showSuccess(context, msg);
+  void _showError(String msg) => SnackBarHelper.showError(context, msg);
 
   Future<bool> _showConfirmDialog(String message) async {
     final result = await showDialog<bool>(
@@ -137,8 +131,7 @@ class _ClientScreenState extends State<ClientScreen> {
               Text(_errorMessage!),
               const SizedBox(height: 16),
               ElevatedButton(
-                  onPressed: _loadClients,
-                  child: const Text('Reintentar')),
+                  onPressed: _loadClients, child: const Text('Reintentar')),
             ],
           ),
         ),
@@ -241,12 +234,13 @@ class _ClientScreenState extends State<ClientScreen> {
       ),
       child: Row(
         children: [
-            CircleAvatar(
+          CircleAvatar(
             radius: 22,
             backgroundColor: AppTheme.primary.withOpacity(0.2),
             child: Text(
               client.nombre.isNotEmpty && client.apellido.isNotEmpty
-                  ? client.nombre[0].toUpperCase() + client.apellido[0].toUpperCase()
+                  ? client.nombre[0].toUpperCase() +
+                      client.apellido[0].toUpperCase()
                   : client.nombre.isNotEmpty
                       ? client.nombre[0].toUpperCase()
                       : '?',
@@ -263,8 +257,8 @@ class _ClientScreenState extends State<ClientScreen> {
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
                 Text(client.correo,
-                    style: const TextStyle(
-                        color: AppTheme.muted, fontSize: 13)),
+                    style:
+                        const TextStyle(color: AppTheme.muted, fontSize: 13)),
               ],
             ),
           ),
@@ -299,13 +293,12 @@ class _ClientScreenState extends State<ClientScreen> {
             ),
             const SizedBox(height: 20),
             Text(client.nombreCompleto,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 22)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
             const SizedBox(height: 15),
             _buildInfoTile(Icons.email, 'Email', client.correo),
             _buildInfoTile(Icons.phone, 'Teléfono', client.telefono),
-            _buildInfoTile(
-                Icons.check_circle, 'Estado', client.estado),
+            _buildInfoTile(Icons.check_circle, 'Estado', client.estado),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -347,21 +340,17 @@ class _ClientScreenState extends State<ClientScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: AppTheme.background,
-          borderRadius: BorderRadius.circular(12)),
+          color: AppTheme.background, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
           Icon(icon, color: AppTheme.primary),
           const SizedBox(width: 10),
           Text('$title: ',
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w500)),
-          Expanded(
-              child: Text(value, style: const TextStyle(fontSize: 16))),
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
         ],
       ),
     );
   }
 }
-
-
