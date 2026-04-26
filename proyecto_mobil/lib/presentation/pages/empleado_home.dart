@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import 'appointments.dart';
 import 'profile.dart';
@@ -25,7 +25,7 @@ class _EmpleadoHomeScreenState extends State<EmpleadoHomeScreen> {
       body: _screens[_index],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
-        selectedItemColor: AppTheme.accent,
+        selectedItemColor: AppTheme.primary,
         unselectedItemColor: AppTheme.muted,
         onTap: (i) => setState(() => _index = i),
         items: const [
@@ -63,3 +63,4 @@ class NovedadesScreen extends StatelessWidget {
     );
   }
 }
+

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../../core/services/api_service.dart';
@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import 'admin_home.dart';
 import 'Cliente_home.dart';
 import 'empleado_home.dart';
+import 'register.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -42,31 +44,29 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final response = await ApiService.post(
         ApiConstants.login,
-        {
-          'correo': email,
-          'contrasena': password,
-        },
+        {'correo': email, 'contrasena': password},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
 
-        // Decodificar el JWT para obtener el rol
         Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-        final role = decodedToken['rol'] ?? '';
-        final userId = decodedToken['id'] ?? 0;
-        final userName = decodedToken['nombre'] ?? '';
+        final role = decodedToken['rol'] ?? decodedToken['role'] ?? '';
+        final userId = decodedToken['id'] ?? decodedToken['userId'] ?? 0;
+        // Soporta 'nombre', 'name', 'firstName' según lo que devuelva el JWT
+        final firstName = decodedToken['firstName']?.toString() ?? '';
+        final lastName = decodedToken['lastName']?.toString() ?? '';
+        final fullName = decodedToken['nombre']?.toString() ??
+            decodedToken['name']?.toString() ??
+            (firstName.isNotEmpty ? '$firstName $lastName'.trim() : 'Usuario');
 
-        // Guardar en storage
         await StorageService.saveToken(token);
         await StorageService.saveRole(role);
         await StorageService.saveUserId(userId);
-        await StorageService.saveUserName(userName);
+        await StorageService.saveUserName(fullName);
 
         if (!mounted) return;
-
-        // Navegar según el rol
         _navigateToHome(role);
       } else {
         final errorData = jsonDecode(response.body);
@@ -75,26 +75,28 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       _showError('Error de conexión: ${e.toString()}');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _navigateToHome(String role) {
     Widget homeScreen;
-
     if (role == 'Admin') {
       homeScreen = const AdminHomeScreen();
     } else if (role == 'Cliente') {
       homeScreen = const ClienteHomeScreen();
-    } else if (['Manicurista', 'Estilista', 'Barbero', 'Masajista', 'Cosmetóloga'].contains(role)) {
+    } else if ([
+      'Manicurista',
+      'Estilista',
+      'Barbero',
+      'Masajista',
+      'Cosmetóloga'
+    ].contains(role)) {
       homeScreen = const EmpleadoHomeScreen();
     } else {
       _showError('Rol no reconocido');
       return;
     }
-
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => homeScreen),
     );
@@ -113,13 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.primary, AppTheme.accent],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: AppTheme.primary,
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -140,39 +136,28 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo o ícono
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppTheme.accent.withOpacity(0.1),
+                      color: AppTheme.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.spa,
-                      size: 60,
-                      color: AppTheme.accent,
-                    ),
+                    child: const Icon(Icons.spa,
+                        size: 60, color: AppTheme.primary),
                   ),
-
                   const SizedBox(height: 24),
-
                   Text(
-                    "Iniciar Sesión",
+                    'Iniciar Sesión',
                     style: Theme.of(context).textTheme.displaySmall,
                   ),
-
                   const SizedBox(height: 8),
-
                   Text(
-                    "Bienvenido de vuelta",
+                    'Bienvenido de vuelta',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.muted,
                         ),
                   ),
-
                   const SizedBox(height: 32),
-
-                  // Campo de correo
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -181,22 +166,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // Campo de contraseña
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: !_showPassword,
+                    decoration: InputDecoration(
                       labelText: 'Contraseña',
-                      prefixIcon: Icon(Icons.lock_outline),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () =>
+                            setState(() => _showPassword = !_showPassword),
+                      ),
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
-                  // Botón de login
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -212,6 +200,35 @@ class _LoginScreenState extends State<LoginScreen> {
                             )
                           : const Text('Iniciar Sesión'),
                     ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Registro
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '¿No tienes cuenta? ',
+                        style: TextStyle(color: AppTheme.muted, fontSize: 14),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
+                        ),
+                        child: Text(
+                          'Regístrate',
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

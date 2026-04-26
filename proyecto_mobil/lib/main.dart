@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/storage_service.dart';
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Verifica si hay sesión activa al iniciar la app
+// Verifica si hay Sesión activa al iniciar la app
 class AuthChecker extends StatefulWidget {
   const AuthChecker({super.key});
 
@@ -84,7 +84,7 @@ class _AuthCheckerState extends State<AuthChecker> {
     return const Scaffold(
       body: Center(
         child: CircularProgressIndicator(
-          color: AppTheme.accent,
+          color: AppTheme.primary,
         ),
       ),
     );
@@ -92,7 +92,7 @@ class _AuthCheckerState extends State<AuthChecker> {
 }
 
 /// ------------------------------------------------
-///   CONTROLADOR DE TODA LA NAVEGACIÓN INFERIOR
+///   CONTROLADOR DE TODA LA NAVEGACIÁ“N INFERIOR
 /// ------------------------------------------------
 class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
@@ -120,7 +120,7 @@ class _MainNavigatorState extends State<MainNavigator> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.accent,
+        selectedItemColor: AppTheme.primary,
         unselectedItemColor: AppTheme.muted,
         onTap: (i) => setState(() => _index = i),
         items: const [
@@ -203,12 +203,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         final today = DateTime.now();
-
-        _citasHoy = data.where((appointment) {
-          final fechaHora = DateTime.parse(appointment['fecha_hora']);
-          return fechaHora.year == today.year &&
-              fechaHora.month == today.month &&
-              fechaHora.day == today.day;
+        _citasHoy = data.where((a) {
+          try {
+            final raw =
+                a['fecha_hora'] ?? a['fechaHora'] ?? a['date'] ?? a['fecha'];
+            if (raw == null) return false;
+            final fecha = DateTime.parse(raw.toString());
+            return fecha.year == today.year &&
+                fecha.month == today.month &&
+                fecha.day == today.day;
+          } catch (_) {
+            return false;
+          }
         }).length;
       }
     } catch (e) {
@@ -236,11 +242,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final today = DateTime.now();
 
         _ventasHoy = data.where((sale) {
-          final createdAt = DateTime.parse(sale['created_at']);
-          return createdAt.year == today.year &&
-              createdAt.month == today.month &&
-              createdAt.day == today.day;
-        }).fold(0.0, (sum, sale) => sum + (sale['total'] ?? 0).toDouble());
+          try {
+            final raw = sale['created_at'] ??
+                sale['createdAt'] ??
+                sale['fecha'] ??
+                sale['date'];
+            if (raw == null) return false;
+            final createdAt = DateTime.parse(raw.toString());
+            return createdAt.year == today.year &&
+                createdAt.month == today.month &&
+                createdAt.day == today.day;
+          } catch (_) {
+            return false;
+          }
+        }).fold(
+            0.0,
+            (sum, sale) =>
+                sum +
+                ((sale['total'] ?? sale['amount'] ?? 0) as num).toDouble());
       }
     } catch (e) {
       print('Error loading sales: $e');
@@ -254,28 +273,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final List<dynamic> data = jsonDecode(response.body);
         final now = DateTime.now();
 
-        // Filtrar citas futuras y ordenar por fecha
-        final upcoming = data.where((appointment) {
-          final fechaHora = DateTime.parse(appointment['fecha_hora']);
-          return fechaHora.isAfter(now) && appointment['estado'] == 'Pendiente';
+        final upcoming = data.where((a) {
+          try {
+            final raw =
+                a['fecha_hora'] ?? a['fechaHora'] ?? a['date'] ?? a['fecha'];
+            if (raw == null) return false;
+            final fecha = DateTime.parse(raw.toString());
+            final estado = (a['estado'] ?? a['status'] ?? '').toString();
+            return fecha.isAfter(now) && estado == 'Pendiente';
+          } catch (_) {
+            return false;
+          }
         }).toList()
           ..sort((a, b) {
-            final dateA = DateTime.parse(a['fecha_hora']);
-            final dateB = DateTime.parse(b['fecha_hora']);
-            return dateA.compareTo(dateB);
+            try {
+              final rawA = a['fecha_hora'] ??
+                  a['fechaHora'] ??
+                  a['date'] ??
+                  a['fecha'] ??
+                  '';
+              final rawB = b['fecha_hora'] ??
+                  b['fechaHora'] ??
+                  b['date'] ??
+                  b['fecha'] ??
+                  '';
+              return DateTime.parse(rawA.toString())
+                  .compareTo(DateTime.parse(rawB.toString()));
+            } catch (_) {
+              return 0;
+            }
           });
 
-        // Tomar las primeras 3
-        _proximasCitas =
-            upcoming.take(3).map<Map<String, String>>((appointment) {
-          final fechaHora = DateTime.parse(appointment['fecha_hora']);
-          return {
-            'name': (appointment['cliente_nombre'] ?? 'Cliente').toString(),
-            'service':
-                (appointment['servicio_nombre'] ?? 'Servicio').toString(),
-            'time':
-                '${fechaHora.hour.toString().padLeft(2, '0')}:${fechaHora.minute.toString().padLeft(2, '0')}',
-          };
+        _proximasCitas = upcoming.take(3).map<Map<String, String>>((a) {
+          try {
+            final raw = a['fecha_hora'] ??
+                a['fechaHora'] ??
+                a['date'] ??
+                a['fecha'] ??
+                '';
+            final fecha = DateTime.parse(raw.toString());
+            return {
+              'name': (a['cliente_nombre'] ??
+                      a['clienteNombre'] ??
+                      a['cliente'] ??
+                      'Cliente')
+                  .toString(),
+              'service': (a['servicio_nombre'] ??
+                      a['servicioNombre'] ??
+                      a['servicio'] ??
+                      'Servicio')
+                  .toString(),
+              'time':
+                  '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}',
+            };
+          } catch (_) {
+            return {'name': 'Cliente', 'service': 'Servicio', 'time': '--:--'};
+          }
         }).toList();
       }
     } catch (e) {
@@ -288,7 +341,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_isLoading) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(color: AppTheme.accent),
+          child: CircularProgressIndicator(color: AppTheme.primary),
         ),
       );
     }
@@ -380,17 +433,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHeader() {
+    // Saludo según la hora del día
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Buenos días'
+        : hour < 18
+            ? 'Buenas tardes'
+            : 'Buenas noches';
+
+    // Mostrar solo el primer nombre
+    final firstName = _userName.split(' ').first;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.accent, AppTheme.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary,
         borderRadius: BorderRadius.only(
-          bottomRight: Radius.circular(40),
-          bottomLeft: Radius.circular(40),
+          bottomRight: Radius.circular(28),
+          bottomLeft: Radius.circular(28),
         ),
       ),
       child: Row(
@@ -399,26 +459,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Hola,",
-                    style: TextStyle(fontSize: 18, color: Colors.white)),
-                const SizedBox(height: 2),
                 Text(
-                  _userName,
+                  '$greeting,',
                   style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
+                    fontSize: 14,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  firstName.isNotEmpty ? firstName : 'Usuario',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _userName.contains(' ')
+                      ? _userName.split(' ').skip(1).join(' ')
+                      : '',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white60,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ],
             ),
           ),
+          // Avatar con iniciales
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: Color(0xD9FFFFFF),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
+              border:
+                  Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
             ),
-            child: const Icon(Icons.spa, size: 26, color: AppTheme.accent),
+            child: Center(
+              child: Text(
+                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -443,10 +534,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: AppTheme.accent.withOpacity(0.1),
+                color: AppTheme.primary.withOpacity(0.1),
                 shape: BoxShape.circle),
-            child:
-                const Icon(Icons.trending_up, color: AppTheme.accent, size: 24),
+            child: const Icon(Icons.trending_up,
+                color: AppTheme.primary, size: 24),
           ),
           const SizedBox(width: 15),
           const Expanded(
@@ -505,9 +596,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: AppTheme.accent.withOpacity(0.1),
+                color: AppTheme.primary.withOpacity(0.1),
                 shape: BoxShape.circle),
-            child: Icon(icon, size: 22, color: AppTheme.accent),
+            child: Icon(icon, size: 22, color: AppTheme.primary),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -562,7 +653,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     offset: const Offset(0, 3)),
               ],
             ),
-            child: Icon(icon, size: 28, color: AppTheme.accent),
+            child: Icon(icon, size: 28, color: AppTheme.primary),
           ),
           const SizedBox(height: 6),
           Text(label, style: const TextStyle(fontSize: 13)),
@@ -589,10 +680,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: AppTheme.accent.withOpacity(0.1),
+                color: AppTheme.primary.withOpacity(0.1),
                 shape: BoxShape.circle),
             child: const Icon(Icons.access_time_filled,
-                size: 24, color: AppTheme.accent),
+                size: 24, color: AppTheme.primary),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -612,7 +703,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.accent)),
+                  color: AppTheme.primary)),
         ],
       ),
     );

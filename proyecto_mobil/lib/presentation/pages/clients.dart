@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
@@ -74,7 +74,7 @@ class _ClientScreenState extends State<ClientScreen> {
   }
 
   Future<void> _deleteClient(int id) async {
-    final confirm = await _showConfirmDialog('¿Eliminar este cliente?');
+    final confirm = await _showConfirmDialog('Â¿Eliminar este cliente?');
     if (!confirm) return;
     try {
       final response =
@@ -121,7 +121,7 @@ class _ClientScreenState extends State<ClientScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
       );
     }
 
@@ -182,11 +182,7 @@ class _ClientScreenState extends State<ClientScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.accent, AppTheme.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -247,7 +243,7 @@ class _ClientScreenState extends State<ClientScreen> {
         children: [
             CircleAvatar(
             radius: 22,
-            backgroundColor: AppTheme.accent.withOpacity(0.2),
+            backgroundColor: AppTheme.primary.withOpacity(0.2),
             child: Text(
               client.nombre.isNotEmpty && client.apellido.isNotEmpty
                   ? client.nombre[0].toUpperCase() + client.apellido[0].toUpperCase()
@@ -255,7 +251,7 @@ class _ClientScreenState extends State<ClientScreen> {
                       ? client.nombre[0].toUpperCase()
                       : '?',
               style: const TextStyle(
-                  color: AppTheme.accent, fontWeight: FontWeight.bold),
+                  color: AppTheme.primary, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 14),
@@ -355,7 +351,7 @@ class _ClientScreenState extends State<ClientScreen> {
           borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.accent),
+          Icon(icon, color: AppTheme.primary),
           const SizedBox(width: 10),
           Text('$title: ',
               style: const TextStyle(
@@ -367,3 +363,5 @@ class _ClientScreenState extends State<ClientScreen> {
     );
   }
 }
+
+

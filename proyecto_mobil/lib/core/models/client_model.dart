@@ -1,4 +1,4 @@
-class ClientModel {
+﻿class ClientModel {
   final int id;
   final String nombre;
   final String apellido;
@@ -24,17 +24,19 @@ class ClientModel {
   factory ClientModel.fromJson(Map<String, dynamic> json) {
     return ClientModel(
       id: json['id'] ?? 0,
-      nombre: json['nombre']?.toString() ?? '',
-      apellido: json['apellido']?.toString() ?? '',
-      correo: json['correo']?.toString() ?? '',
-      telefono: json['telefono']?.toString() ?? '',
-      fotoPerfil: json['foto_perfil']?.toString(),
-      estado: json['estado']?.toString() ?? 'Activo',
+      nombre: (json['nombre'] ?? json['firstName'] ?? json['name'] ?? '')
+          .toString(),
+      apellido: (json['apellido'] ?? json['lastName'] ?? '').toString(),
+      correo: (json['correo'] ?? json['email'] ?? '').toString(),
+      telefono: (json['telefono'] ?? json['phone'] ?? '').toString(),
+      fotoPerfil: (json['foto_perfil'] ?? json['photo'] ?? json['fotoPerfil'])
+          ?.toString(),
+      estado: (json['estado'] ?? json['status'] ?? 'Activo').toString(),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.parse(json['created_at'].toString())
           : DateTime.now(),
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? DateTime.parse(json['updated_at'].toString())
           : DateTime.now(),
     );
   }

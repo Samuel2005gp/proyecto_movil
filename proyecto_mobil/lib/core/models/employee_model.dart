@@ -1,4 +1,4 @@
-class EmployeeModel {
+﻿class EmployeeModel {
   final int id;
   final String nombre;
   final String apellido;

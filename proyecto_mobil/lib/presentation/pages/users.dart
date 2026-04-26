@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
@@ -100,7 +100,7 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Future<void> _deleteUser(int id) async {
-    final confirm = await _showConfirmDialog('¿Eliminar este usuario?');
+    final confirm = await _showConfirmDialog('Â¿Eliminar este usuario?');
     if (!confirm) return;
     try {
       final response = await ApiService.delete(ApiConstants.userDetail(id));
@@ -145,7 +145,7 @@ class _UsersScreenState extends State<UsersScreen> {
     if (_isLoading) {
       return const Scaffold(
           body:
-              Center(child: CircularProgressIndicator(color: AppTheme.accent)));
+              Center(child: CircularProgressIndicator(color: AppTheme.primary)));
     }
 
     if (_errorMessage != null) {
@@ -176,7 +176,7 @@ class _UsersScreenState extends State<UsersScreen> {
           );
           if (created == true) _loadData();
         },
-        backgroundColor: AppTheme.accent,
+        backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: SafeArea(
@@ -213,11 +213,7 @@ class _UsersScreenState extends State<UsersScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.accent, AppTheme.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -279,11 +275,11 @@ class _UsersScreenState extends State<UsersScreen> {
           CircleAvatar(
             radius: 22,
             backgroundColor: user.isActive
-                ? AppTheme.accent.withOpacity(0.2)
+                ? AppTheme.primary.withOpacity(0.2)
                 : AppTheme.muted.withOpacity(0.2),
             child: Text(initials,
                 style: TextStyle(
-                    color: user.isActive ? AppTheme.accent : AppTheme.muted,
+                    color: user.isActive ? AppTheme.primary : AppTheme.muted,
                     fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 12),
@@ -378,9 +374,9 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  FORMULARIO CREAR / EDITAR USUARIO
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class UserFormScreen extends StatefulWidget {
   final UserModel? user;
   final List<Map<String, dynamic>> roles;
@@ -533,7 +529,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
 
               // Selector de rol
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   labelText: 'Rol',
                   prefixIcon: Icon(Icons.badge_outlined),
@@ -568,10 +564,12 @@ class _UserFormScreenState extends State<UserFormScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (!_isEditing && (v == null || v.isEmpty))
+                    if (!_isEditing && (v == null || v.isEmpty)) {
                       return 'Requerido';
-                    if (!_isEditing && v!.length < 6)
+                    }
+                    if (!_isEditing && v!.length < 6) {
                       return 'Mínimo 6 caracteres';
+                    }
                     return null;
                   },
                 ),
@@ -597,3 +595,5 @@ class _UserFormScreenState extends State<UserFormScreen> {
     );
   }
 }
+
+

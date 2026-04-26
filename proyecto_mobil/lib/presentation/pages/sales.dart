@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
@@ -36,6 +36,11 @@ class _SaleScreenState extends State<SaleScreen> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+        // Debug: imprime el primer elemento para ver la estructura
+        if (data.isNotEmpty) {
+          print('SALE FIELDS: ${data[0].keys.toList()}');
+          print('SALE SAMPLE: ${data[0]}');
+        }
         setState(() {
           _sales = data.map((json) => SaleModel.fromJson(json)).toList();
           _calculateTotals();
@@ -71,7 +76,7 @@ class _SaleScreenState extends State<SaleScreen> {
   }
 
   Future<void> _deleteSale(int id) async {
-    final confirm = await _showConfirmDialog('¿Eliminar esta venta?');
+    final confirm = await _showConfirmDialog('Â¿Eliminar esta venta?');
     if (!confirm) return;
 
     try {
@@ -124,7 +129,7 @@ class _SaleScreenState extends State<SaleScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
       );
     }
 
@@ -134,7 +139,8 @@ class _SaleScreenState extends State<SaleScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 60, color: AppTheme.destructive),
+              const Icon(Icons.error_outline,
+                  size: 60, color: AppTheme.destructive),
               const SizedBox(height: 16),
               Text(_errorMessage!),
               const SizedBox(height: 16),
@@ -175,11 +181,7 @@ class _SaleScreenState extends State<SaleScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.accent, AppTheme.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -190,7 +192,10 @@ class _SaleScreenState extends State<SaleScreen> {
             children: [
               const Text(
                 "Ventas",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
               ),
               const SizedBox(height: 5),
               Text(
@@ -201,7 +206,7 @@ class _SaleScreenState extends State<SaleScreen> {
           ),
           const CircleAvatar(
             backgroundColor: Colors.white,
-            child: Icon(Icons.add, color: AppTheme.accent),
+            child: Icon(Icons.add, color: AppTheme.primary),
           ),
         ],
       ),
@@ -211,9 +216,13 @@ class _SaleScreenState extends State<SaleScreen> {
   Widget _buildSummaryCards() {
     return Row(
       children: [
-        Expanded(child: _buildSummaryCard(Icons.attach_money, "Hoy", "\$${_totalToday.toStringAsFixed(0)}")),
+        Expanded(
+            child: _buildSummaryCard(Icons.attach_money, "Hoy",
+                "\$${_totalToday.toStringAsFixed(0)}")),
         const SizedBox(width: 10),
-        Expanded(child: _buildSummaryCard(Icons.trending_up, "Este mes", "\$${_totalMonth.toStringAsFixed(0)}")),
+        Expanded(
+            child: _buildSummaryCard(Icons.trending_up, "Este mes",
+                "\$${_totalMonth.toStringAsFixed(0)}")),
       ],
     );
   }
@@ -225,16 +234,22 @@ class _SaleScreenState extends State<SaleScreen> {
         color: AppTheme.card,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppTheme.accent, size: 30),
+          Icon(icon, color: AppTheme.primary, size: 30),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.muted)),
+          Text(label,
+              style: const TextStyle(fontSize: 13, color: AppTheme.muted)),
           const SizedBox(height: 3),
-          Text(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -257,7 +272,10 @@ class _SaleScreenState extends State<SaleScreen> {
         color: AppTheme.card,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -276,7 +294,8 @@ class _SaleScreenState extends State<SaleScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: Text('No hay ventas registradas', style: TextStyle(color: AppTheme.muted)),
+          child: Text('No hay ventas registradas',
+              style: TextStyle(color: AppTheme.muted)),
         ),
       );
     }
@@ -291,7 +310,10 @@ class _SaleScreenState extends State<SaleScreen> {
         color: AppTheme.card,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 5, offset: const Offset(0, 3)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 5,
+              offset: const Offset(0, 3)),
         ],
       ),
       child: Row(
@@ -299,10 +321,11 @@ class _SaleScreenState extends State<SaleScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.accent.withOpacity(0.1),
+              color: AppTheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.shopping_bag, color: AppTheme.accent, size: 28),
+            child: const Icon(Icons.shopping_bag,
+                color: AppTheme.primary, size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -311,7 +334,8 @@ class _SaleScreenState extends State<SaleScreen> {
               children: [
                 Text(
                   sale.clienteNombre ?? 'Cliente',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   sale.servicioNombre ?? 'Servicio',
@@ -319,7 +343,7 @@ class _SaleScreenState extends State<SaleScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "${_formatDate(sale.createdAt)}   •   ${sale.metodoPago}",
+                  "${_formatDate(sale.createdAt)}   â€¢   ${sale.metodoPago}",
                   style: const TextStyle(color: AppTheme.muted, fontSize: 12),
                 ),
               ],
@@ -330,11 +354,15 @@ class _SaleScreenState extends State<SaleScreen> {
             children: [
               Text(
                 "\$${sale.total.toStringAsFixed(0)}",
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accent, fontSize: 16),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary,
+                    fontSize: 16),
               ),
               const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _getStatusColor(sale.estado).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -361,7 +389,9 @@ class _SaleScreenState extends State<SaleScreen> {
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       return "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
     }
     return "${date.day}/${date.month}/${date.year}";
