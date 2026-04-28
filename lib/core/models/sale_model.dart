@@ -42,22 +42,31 @@
         ? rawItems.map((e) => Map<String, dynamic>.from(e as Map)).toList()
         : [];
 
+    // El backend devuelve: Cliente, Servicio, Total, Subtotal, Fecha, Estado,
+    // metodo_pago, descuento — con mayúsculas/minúsculas mixtas
     return SaleModel(
-      id: json['id'] ?? 0,
-      citaId: json['cita_id'] ?? json['citaId'] ?? json['appointmentId'],
-      total: (json['total'] ?? json['amount'] ?? 0).toDouble(),
-      subtotal:
-          (json['subtotal'] ?? json['total'] ?? json['amount'] ?? 0).toDouble(),
-      descuento: (json['descuento'] ?? json['discount'] ?? 0).toDouble(),
+      id: json['id'] ?? json['PK_id_venta_encabezado'] ?? 0,
+      citaId: json['citaId'] ?? json['FK_id_cita'] ?? json['cita_id'],
+      total: (json['Total'] ?? json['total'] ?? json['amount'] ?? 0).toDouble(),
+      subtotal: (json['Subtotal'] ??
+              json['subtotal'] ??
+              json['Total'] ??
+              json['total'] ??
+              0)
+          .toDouble(),
+      descuento:
+          (json['descuento'] ?? json['Descuento'] ?? json['discount'] ?? 0)
+              .toDouble(),
       metodoPago: (json['metodo_pago'] ??
               json['metodoPago'] ??
+              json['MetodoPago'] ??
               json['paymentMethod'] ??
               '')
           .toString(),
-      estado: (json['estado'] ?? json['status'] ?? 'Completada').toString(),
+      estado: (json['Estado'] ?? json['estado'] ?? json['status'] ?? 'Activo')
+          .toString(),
       fecha: parseDate(
-        json['created_at'] ?? json['fecha'] ?? json['date'],
-      ),
+          json['Fecha'] ?? json['fecha'] ?? json['created_at'] ?? json['date']),
       citaFecha: (json['cita_fecha'] ??
                   json['citaFecha'] ??
                   json['appointment_date']) !=
@@ -66,20 +75,22 @@
               json['citaFecha'] ??
               json['appointment_date'])
           : null,
-      clienteNombre: (json['cliente_nombre'] ??
+      // El backend devuelve "Cliente" como string con nombre completo
+      clienteNombre: (json['Cliente'] ??
+              json['cliente_nombre'] ??
               json['clienteNombre'] ??
               json['client_name'] ??
               json['clientName'] ??
               json['cliente'] ??
-              json['client'] ??
               'Sin cliente')
           .toString(),
-      servicioNombre: (json['servicio_nombre'] ??
+      // El backend devuelve "Servicio" como string con nombre(s) del servicio
+      servicioNombre: (json['Servicio'] ??
+              json['servicio_nombre'] ??
               json['servicioNombre'] ??
               json['service_name'] ??
               json['serviceName'] ??
               json['servicio'] ??
-              json['service'] ??
               'Sin servicio')
           .toString(),
       items: itemsList,
@@ -90,12 +101,12 @@
     return {
       'id': id,
       'cita_id': citaId,
-      'total': total,
-      'subtotal': subtotal,
+      'Total': total,
+      'Subtotal': subtotal,
       'descuento': descuento,
       'metodo_pago': metodoPago,
-      'estado': estado,
-      'fecha': fecha.toIso8601String(),
+      'Estado': estado,
+      'Fecha': fecha.toIso8601String(),
     };
   }
 }

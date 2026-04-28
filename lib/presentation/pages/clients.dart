@@ -140,57 +140,62 @@ class _ClientScreenState extends State<ClientScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadClients,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 20),
-                _buildSearchBar(),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: _filteredClients.isEmpty
-                      ? const Center(
-                          child: Text('No se encontraron clientes',
-                              style: TextStyle(color: AppTheme.muted)))
-                      : ListView.builder(
-                          itemCount: _filteredClients.length,
-                          itemBuilder: (context, index) =>
-                              _buildClientCard(_filteredClients[index]),
-                        ),
-                ),
-              ],
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadClients,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: _buildSearchBar(),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: _filteredClients.isEmpty
+                        ? const Center(
+                            child: Text('No se encontraron clientes',
+                                style: TextStyle(color: AppTheme.muted)))
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                            itemCount: _filteredClients.length,
+                            itemBuilder: (context, index) =>
+                                _buildClientCard(_filteredClients[index]),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
+    final topPadding = MediaQuery.of(context).padding.top;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
+      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
+      decoration: const BoxDecoration(
         color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Clientes',
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white)),
-          const SizedBox(height: 5),
-          Text('${_clients.length} clientes registrados',
-              style: const TextStyle(color: Colors.white70)),
-        ],
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Clientes',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
+        const SizedBox(height: 4),
+        Text('${_clients.length} clientes registrados',
+            style: const TextStyle(fontSize: 13, color: Colors.white70)),
+      ]),
     );
   }
 
@@ -276,22 +281,19 @@ class _ClientScreenState extends State<ClientScreen> {
             children: [
               // Botón Ver
               IconButton(
-                icon: const Icon(Icons.visibility_outlined,
+                icon: const Icon(Icons.remove_red_eye_outlined,
                     color: AppTheme.primary),
                 onPressed: () => _viewClient(client),
                 tooltip: 'Ver detalles',
               ),
               // Botón Editar
               IconButton(
-                icon:
-                    const Icon(Icons.edit_outlined, color: AppTheme.colorEdit),
+                icon: const Icon(Icons.edit_outlined, color: AppTheme.primary),
                 onPressed: () => _editClient(client),
                 tooltip: 'Editar',
               ),
-              // Botón Eliminar
               IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: AppTheme.destructive),
+                icon: const Icon(Icons.close, color: AppTheme.destructive),
                 onPressed: () => _deleteClient(client.id),
                 tooltip: 'Eliminar',
               ),

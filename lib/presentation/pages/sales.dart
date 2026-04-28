@@ -139,33 +139,50 @@ class _SaleScreenState extends State<SaleScreen> {
         backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadSales,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
-              _buildSummaryCards(),
-              const SizedBox(height: 20),
-              _buildSalesList(),
-              const SizedBox(height: 80),
-            ],
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadSales,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                children: [
+                  _buildSummaryCards(),
+                  const SizedBox(height: 20),
+                  _buildSalesList(),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Ventas',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 4),
-      Text('${_sales.length} transacciones',
-          style: const TextStyle(fontSize: 14, color: AppTheme.muted)),
-    ]);
+    final topPadding = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Ventas',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
+        const SizedBox(height: 4),
+        Text('${_sales.length} transacciones',
+            style: const TextStyle(fontSize: 13, color: Colors.white70)),
+      ]),
+    );
   }
 
   Widget _buildSummaryCards() {
@@ -300,21 +317,20 @@ class _SaleScreenState extends State<SaleScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               IconButton(
-                icon: const Icon(Icons.visibility_outlined,
+                icon: const Icon(Icons.remove_red_eye_outlined,
                     color: AppTheme.primary),
                 onPressed: () => _viewSale(sale),
                 tooltip: 'Ver detalles',
               ),
               if (sale.estado.toLowerCase() != 'completada')
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      color: AppTheme.colorEdit),
+                  icon:
+                      const Icon(Icons.edit_outlined, color: AppTheme.primary),
                   onPressed: () => _editSale(sale),
                   tooltip: 'Editar',
                 ),
               IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: AppTheme.destructive),
+                icon: const Icon(Icons.close, color: AppTheme.destructive),
                 onPressed: () => _deleteSale(sale.id),
                 tooltip: 'Eliminar',
               ),

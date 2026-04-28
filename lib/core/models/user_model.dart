@@ -32,10 +32,11 @@
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    // El backend devuelve 'name' como nombre completo cuando no hay perfil (ej: Admin)
-    // y 'firstName'/'lastName' cuando sí hay perfil de empleado/cliente
-    final firstName = json['firstName']?.toString() ?? '';
-    final lastName = json['lastName']?.toString() ?? '';
+    // Soporta respuestas de /users/:id, /employees/mi-perfil y /clients/mi-perfil
+    final firstName =
+        json['firstName']?.toString() ?? json['nombre']?.toString() ?? '';
+    final lastName =
+        json['lastName']?.toString() ?? json['apellido']?.toString() ?? '';
     final fullName = json['name']?.toString() ?? '';
 
     String nombre = firstName;
@@ -50,13 +51,18 @@
       apellido = parts.length > 1 ? parts.skip(1).join(' ') : '';
     }
 
+    // El id puede venir como 'id' o 'PK_id_cliente'
+    final id = json['id'] ?? json['PK_id_cliente'] ?? 0;
+
     return UserModel(
-      id: json['id'] ?? 0,
+      id: id is int ? id : int.tryParse(id.toString()) ?? 0,
       nombre: nombre,
       apellido: apellido,
       correo: json['email']?.toString() ?? json['correo']?.toString() ?? '',
       telefono: json['phone']?.toString() ?? json['telefono']?.toString() ?? '',
-      fotoPerfil: json['photo']?.toString() ?? json['foto_perfil']?.toString(),
+      fotoPerfil: json['photo']?.toString() ??
+          json['foto_perfil']?.toString() ??
+          json['fotoPerfil']?.toString(),
       rol: json['role']?.toString() ?? json['rol']?.toString() ?? '',
       rolId: json['rolId'],
       estado: json['estado']?.toString() ?? 'Activo',
@@ -67,8 +73,14 @@
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
-      documentType: json['documentType']?.toString() ?? '',
-      document: json['document']?.toString() ?? '',
+      documentType: json['documentType']?.toString() ??
+          json['tipo_documento']?.toString() ??
+          json['tipoDocumento']?.toString() ??
+          '',
+      document: json['document']?.toString() ??
+          json['numero_documento']?.toString() ??
+          json['numeroDocumento']?.toString() ??
+          '',
     );
   }
 

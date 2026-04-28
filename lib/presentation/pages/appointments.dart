@@ -260,11 +260,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'completada':
-        return const Color(0xFFD97706);
+        return const Color(0xFF1D4ED8); // azul
       case 'pendiente':
-        return const Color(0xFF1D4ED8);
+        return const Color(0xFFD97706); // amarillo
       case 'cancelada':
-        return const Color(0xFFDC2626);
+        return const Color(0xFFDC2626); // rojo
       default:
         return AppTheme.muted;
     }
@@ -273,11 +273,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Color _getStatusBgColor(String status) {
     switch (status.toLowerCase()) {
       case 'completada':
-        return const Color(0xFFFEF9C3);
+        return const Color(0xFFDBEAFE); // azul claro
       case 'pendiente':
-        return const Color(0xFFDBEAFE);
+        return const Color(0xFFFEF9C3); // amarillo claro
       case 'cancelada':
-        return const Color(0xFFFCE7F3);
+        return const Color(0xFFFCE7F3); // rojo claro
       default:
         return const Color(0xFFF3F4F6);
     }
@@ -334,25 +334,28 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadAppointments,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _buildHeader(dayAppointments.length),
-              const SizedBox(height: 20),
-              _buildCalendarCard(),
-              const SizedBox(height: 8),
-              _buildLegend(),
-              const SizedBox(height: 28),
-              _buildDayAppointments(dayAppointments),
-              const SizedBox(height: 80),
-            ]),
+      body: Column(
+        children: [
+          _buildHeader(dayAppointments.length),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadAppointments,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCalendarCard(),
+                      const SizedBox(height: 8),
+                      _buildLegend(),
+                      const SizedBox(height: 28),
+                      _buildDayAppointments(dayAppointments),
+                    ]),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -361,35 +364,52 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final isToday = _selectedDay!.year == DateTime.now().year &&
         _selectedDay!.month == DateTime.now().month &&
         _selectedDay!.day == DateTime.now().day;
-
-    return Row(children: [
-      Expanded(
+    final topPadding = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Row(children: [
+        Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Citas',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 2),
-        Text(
-          isToday
-              ? 'Hoy, ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}'
-              : DateFormat('dd/MM/yyyy').format(_selectedDay!),
-          style: const TextStyle(fontSize: 13, color: AppTheme.muted),
+            const Text('Citas',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
+            const SizedBox(height: 4),
+            Text(
+              isToday
+                  ? 'Hoy, ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}'
+                  : DateFormat('dd/MM/yyyy').format(_selectedDay!),
+              style: const TextStyle(fontSize: 13, color: Colors.white70),
+            ),
+          ]),
         ),
-      ])),
-      if (count > 0)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppTheme.primary,
-            borderRadius: BorderRadius.circular(20),
+        if (count > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$count ${count == 1 ? 'cita' : 'citas'}',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13),
+            ),
           ),
-          child: Text(
-            '$count ${count == 1 ? 'cita' : 'citas'}',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-        ),
-    ]);
+      ]),
+    );
   }
 
   Widget _buildCalendarCard() {
@@ -718,10 +738,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     () => _changeStatus(appointment, 'Cancelada')),
               ],
               if (_userRole == 'Admin')
-                _actionBtn(
-                    Icons.delete_outline,
-                    'Eliminar',
-                    AppTheme.destructive,
+                _actionBtn(Icons.close, 'Eliminar', AppTheme.destructive,
                     () => _deleteAppointment(appointment)),
             ]),
           ],

@@ -143,53 +143,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadUserProfile,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 24),
-              const Text('Mi Cuenta',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.muted)),
-              const SizedBox(height: 10),
-              _buildOptionTile(
-                  icon: Icons.person_outline,
-                  label: 'Editar Perfil',
-                  onTap: () async {
-                    final updated = await Navigator.push<bool>(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => EditProfileScreen(user: _user!)));
-                    if (updated == true) _loadUserProfile();
-                  }),
-              _buildOptionTile(
-                  icon: Icons.lock_outline,
-                  label: 'Cambiar Contrasena',
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                              ChangePasswordScreen(userId: _user!.id)))),
-              const SizedBox(height: 32),
-              _buildLogoutButton(),
-              const SizedBox(height: 40),
-            ],
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadUserProfile,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+                children: [
+                  const Text('Mi Cuenta',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.muted)),
+                  const SizedBox(height: 10),
+                  _buildOptionTile(
+                      icon: Icons.person_outline,
+                      label: 'Editar Perfil',
+                      onTap: () async {
+                        final updated = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    EditProfileScreen(user: _user!)));
+                        if (updated == true) _loadUserProfile();
+                      }),
+                  _buildOptionTile(
+                      icon: Icons.lock_outline,
+                      label: 'Cambiar Contrasena',
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  ChangePasswordScreen(userId: _user!.id)))),
+                  const SizedBox(height: 32),
+                  _buildLogoutButton(),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
+    final topPadding = MediaQuery.of(context).padding.top;
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: AppTheme.primary, borderRadius: BorderRadius.circular(16)),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
       child: Row(children: [
         CircleAvatar(
             radius: 32,
@@ -289,6 +299,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _apellidoCtrl;
   late TextEditingController _telefonoCtrl;
   late TextEditingController _documentCtrl;
+  late TextEditingController _correoCtrl;
   String? _selectedDocType;
   bool _isSaving = false;
 
@@ -301,6 +312,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _apellidoCtrl = TextEditingController(text: widget.user.apellido);
     _telefonoCtrl = TextEditingController(text: widget.user.telefono);
     _documentCtrl = TextEditingController(text: widget.user.document);
+    _correoCtrl = TextEditingController(text: widget.user.correo);
     _selectedDocType =
         widget.user.documentType.isNotEmpty ? widget.user.documentType : null;
   }
@@ -311,6 +323,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _apellidoCtrl.dispose();
     _telefonoCtrl.dispose();
     _documentCtrl.dispose();
+    _correoCtrl.dispose();
     super.dispose();
   }
 
@@ -329,7 +342,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             'firstName': _nombreCtrl.text.trim(),
             'lastName': _apellidoCtrl.text.trim(),
             'phone': _telefonoCtrl.text.trim(),
-            'email': widget.user.correo,
+            'email': _correoCtrl.text.trim(),
             'role': widget.user.rol,
             if (_selectedDocType != null) 'documentType': _selectedDocType,
             if (_documentCtrl.text.trim().isNotEmpty)
@@ -358,12 +371,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         response = await ApiService.put(
           ApiConstants.updateClientePerfil(widget.user.id),
           {
-            'nombre': _nombreCtrl.text.trim(),
-            'apellido': _apellidoCtrl.text.trim(),
-            'telefono': _telefonoCtrl.text.trim(),
-            if (_selectedDocType != null) 'tipo_documento': _selectedDocType,
+            'firstName': _nombreCtrl.text.trim(),
+            'lastName': _apellidoCtrl.text.trim(),
+            'phone': _telefonoCtrl.text.trim(),
+            'email': _correoCtrl.text.trim(),
+            if (_selectedDocType != null) 'documentType': _selectedDocType,
             if (_documentCtrl.text.trim().isNotEmpty)
-              'numero_documento': _documentCtrl.text.trim(),
+              'document': _documentCtrl.text.trim(),
           },
         );
       }
@@ -375,12 +389,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         SnackBarHelper.showSuccess(context, 'Perfil actualizado correctamente');
         Navigator.pop(context, true);
       } else {
-        String errorMsg = 'Error ${response.statusCode}';
+        String errorMsg = 'Error ${response.statusCode}: ${response.body}';
         try {
           final error = jsonDecode(response.body);
           errorMsg = error['error']?.toString() ??
               error['message']?.toString() ??
-              errorMsg;
+              'Error ${response.statusCode}';
         } catch (_) {}
         if (!mounted) return;
         SnackBarHelper.showError(context, errorMsg);
@@ -388,7 +402,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       SnackBarHelper.showError(
-          context, e.toString().replaceAll('Exception: ', ''));
+          context, 'Excepción: ${e.toString().replaceAll('Exception: ', '')}');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -463,14 +477,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              initialValue: widget.user.correo,
-              readOnly: true,
-              decoration: InputDecoration(
+              controller: _correoCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
                 labelText: 'Correo',
-                prefixIcon: const Icon(Icons.email_outlined),
-                filled: true,
-                fillColor: AppTheme.border.withValues(alpha: 0.3),
+                prefixIcon: Icon(Icons.email_outlined),
               ),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
