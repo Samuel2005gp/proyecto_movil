@@ -150,6 +150,91 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
   }
 
+  void _viewAppointment(AppointmentModel appointment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Detalles de la Cita'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow(
+                  'Cliente:',
+                  appointment.clienteNombre.isNotEmpty
+                      ? appointment.clienteNombre
+                      : 'Sin cliente'),
+              _buildDetailRow('Servicio:', appointment.servicioNombre),
+              if (appointment.empleadoNombre.isNotEmpty)
+                _buildDetailRow('Empleado:', appointment.empleadoNombre),
+              _buildDetailRow('Fecha:', appointment.fecha),
+              _buildDetailRow('Hora:', appointment.horario),
+              _buildDetailRow('Estado:', appointment.estado),
+              if (appointment.notas != null && appointment.notas!.isNotEmpty)
+                _buildDetailRow('Notas:', appointment.notas!),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.muted,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editAppointment(AppointmentModel appointment) {
+    // Por ahora mostrar un mensaje, luego se puede implementar la edición completa
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar Cita'),
+        content: const Text(
+            'Funcionalidad de edición en desarrollo.\n\nPor ahora puedes cancelar la cita y crear una nueva.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendido'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _changeStatus(appointment, 'Cancelada');
+            },
+            child: const Text('Cancelar Cita'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSuccess(String msg) => SnackBarHelper.showSuccess(context, msg);
   void _showError(String msg) => SnackBarHelper.showError(context, msg);
 
@@ -578,6 +663,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
+<<<<<<< HEAD
                 color: statusColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -644,6 +730,56 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     () => _deleteAppointment(appointment)),
             ]),
           ],
+=======
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text(appointment.estado,
+                  style: TextStyle(
+                      color: statusColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold))),
+          const Spacer(),
+          // Botón Ver (ojo)
+          IconButton(
+            icon:
+                const Icon(Icons.visibility_outlined, color: AppTheme.primary),
+            onPressed: () => _viewAppointment(appointment),
+            tooltip: 'Ver detalles',
+          ),
+          // Botón Editar (lápiz) - solo si está pendiente
+          if (appointment.estado == 'Pendiente')
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: AppTheme.colorEdit),
+              onPressed: () => _editAppointment(appointment),
+              tooltip: 'Editar',
+            ),
+          // Botones de estado
+          if (appointment.estado == 'Pendiente') ...[
+            if (_userRole != 'Cliente') ...[
+              IconButton(
+                  icon: const Icon(Icons.check_circle,
+                      color: AppTheme.colorSuccess),
+                  onPressed: () => _changeStatus(appointment, 'Completada'),
+                  tooltip: 'Completar'),
+              IconButton(
+                  icon: const Icon(Icons.cancel, color: AppTheme.colorEdit),
+                  onPressed: () => _changeStatus(appointment, 'Cancelada'),
+                  tooltip: 'Cancelar'),
+            ],
+            if (_userRole == 'Cliente')
+              IconButton(
+                  icon: const Icon(Icons.cancel, color: AppTheme.colorEdit),
+                  onPressed: () => _changeStatus(appointment, 'Cancelada'),
+                  tooltip: 'Cancelar'),
+          ],
+          // Botón Eliminar - solo para Admin
+          if (_userRole == 'Admin')
+            IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    color: AppTheme.destructive),
+                onPressed: () => _deleteAppointment(appointment),
+                tooltip: 'Eliminar'),
+>>>>>>> eadd4a94276ee614bd47795412b42c8cb838879d
         ]),
       ),
     );

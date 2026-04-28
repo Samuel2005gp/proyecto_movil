@@ -1,7 +1,17 @@
 ﻿// constants/api_constants.dart
+import 'package:flutter/foundation.dart';
+
 class ApiConstants {
-  // 10.0.2.2 es la IP especial que usa el emulador Android para acceder al localhost de tu PC
-  static const String baseUrl = 'http://10.0.2.2:3001/api';
+  // Configuración para diferentes plataformas
+  static String get baseUrl {
+    if (kIsWeb) {
+      // Para Flutter Web (Chrome, Firefox, etc.)
+      return 'http://localhost:3001';
+    } else {
+      // Para móvil - emulador Android
+      return 'http://10.0.2.2:3001';
+    }
+  }
 
   // Auth endpoints
   static const String login = '/auth/login';
