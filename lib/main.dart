@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/api_service.dart';
@@ -186,7 +187,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _loadAppointmentsToday(),
         _loadClientsCount(),
         _loadSalesToday(),
-        _loadUpcomingAppointments(),
       ]);
 
       setState(() {
@@ -205,24 +205,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final response = await ApiService.get(ApiConstants.appointments);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        final today = DateTime.now();
+        final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
         _citasHoy = data.where((a) {
+          final fecha = a['Fecha']?.toString() ?? a['fecha']?.toString() ?? '';
+          return fecha == todayStr;
+        }).length;
+
+        // Próximas citas: pendientes de hoy en adelante
+        final now = DateTime.now();
+        final upcoming = data.where((a) {
+          final fecha = a['Fecha']?.toString() ?? a['fecha']?.toString() ?? '';
+          final estado =
+              a['Estado']?.toString() ?? a['estado']?.toString() ?? '';
+          if (fecha.isEmpty) return false;
           try {
-            final raw =
-                a['fecha_hora'] ?? a['fechaHora'] ?? a['date'] ?? a['fecha'];
-            if (raw == null) return false;
-            final fecha = DateTime.parse(raw.toString());
-            return fecha.year == today.year &&
-                fecha.month == today.month &&
-                fecha.day == today.day;
+            final d = DateTime.parse(fecha);
+            return estado == 'Pendiente' &&
+                (d.isAfter(now) || fecha == todayStr);
           } catch (_) {
             return false;
           }
-        }).length;
+        }).toList();
+
+        upcoming.sort((a, b) {
+          final fa = a['Fecha']?.toString() ?? a['fecha']?.toString() ?? '';
+          final fb = b['Fecha']?.toString() ?? b['fecha']?.toString() ?? '';
+          final ha = a['Horario']?.toString() ?? a['horario']?.toString() ?? '';
+          final hb = b['Horario']?.toString() ?? b['horario']?.toString() ?? '';
+          return '$fa $ha'.compareTo('$fb $hb');
+        });
+
+        _proximasCitas = upcoming.take(3).map<Map<String, String>>((a) {
+          final servicios = a['servicios'] as List<dynamic>? ?? [];
+          final servicio = servicios.isNotEmpty
+              ? (servicios[0]['serviceName']?.toString() ?? 'Servicio')
+              : 'Servicio';
+          return {
+            'name': (a['cliente_nombre']?.toString() ?? 'Cliente'),
+            'service': servicio,
+            'time':
+                a['Horario']?.toString() ?? a['horario']?.toString() ?? '--:--',
+          };
+        }).toList();
       }
-    } catch (e) {
-      print('Error loading appointments: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadClientsCount() async {
@@ -232,9 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final List<dynamic> data = jsonDecode(response.body);
         _totalClientes = data.length;
       }
-    } catch (e) {
-      print('Error loading clients: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadSalesToday() async {
@@ -242,101 +266,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final response = await ApiService.get(ApiConstants.sales);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        final today = DateTime.now();
-
+        final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
         _ventasHoy = data.where((sale) {
-          try {
-            final raw = sale['created_at'] ??
-                sale['createdAt'] ??
-                sale['fecha'] ??
-                sale['date'];
-            if (raw == null) return false;
-            final createdAt = DateTime.parse(raw.toString());
-            return createdAt.year == today.year &&
-                createdAt.month == today.month &&
-                createdAt.day == today.day;
-          } catch (_) {
-            return false;
-          }
+          final fecha =
+              sale['Fecha']?.toString() ?? sale['fecha']?.toString() ?? '';
+          return fecha == todayStr;
         }).fold(
             0.0,
             (sum, sale) =>
                 sum +
-                ((sale['total'] ?? sale['amount'] ?? 0) as num).toDouble());
+                ((sale['Total'] ?? sale['total'] ?? 0) as num).toDouble());
       }
-    } catch (e) {
-      print('Error loading sales: $e');
-    }
-  }
-
-  Future<void> _loadUpcomingAppointments() async {
-    try {
-      final response = await ApiService.get(ApiConstants.appointments);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        final now = DateTime.now();
-
-        final upcoming = data.where((a) {
-          try {
-            final raw =
-                a['fecha_hora'] ?? a['fechaHora'] ?? a['date'] ?? a['fecha'];
-            if (raw == null) return false;
-            final fecha = DateTime.parse(raw.toString());
-            final estado = (a['estado'] ?? a['status'] ?? '').toString();
-            return fecha.isAfter(now) && estado == 'Pendiente';
-          } catch (_) {
-            return false;
-          }
-        }).toList()
-          ..sort((a, b) {
-            try {
-              final rawA = a['fecha_hora'] ??
-                  a['fechaHora'] ??
-                  a['date'] ??
-                  a['fecha'] ??
-                  '';
-              final rawB = b['fecha_hora'] ??
-                  b['fechaHora'] ??
-                  b['date'] ??
-                  b['fecha'] ??
-                  '';
-              return DateTime.parse(rawA.toString())
-                  .compareTo(DateTime.parse(rawB.toString()));
-            } catch (_) {
-              return 0;
-            }
-          });
-
-        _proximasCitas = upcoming.take(3).map<Map<String, String>>((a) {
-          try {
-            final raw = a['fecha_hora'] ??
-                a['fechaHora'] ??
-                a['date'] ??
-                a['fecha'] ??
-                '';
-            final fecha = DateTime.parse(raw.toString());
-            return {
-              'name': (a['cliente_nombre'] ??
-                      a['clienteNombre'] ??
-                      a['cliente'] ??
-                      'Cliente')
-                  .toString(),
-              'service': (a['servicio_nombre'] ??
-                      a['servicioNombre'] ??
-                      a['servicio'] ??
-                      'Servicio')
-                  .toString(),
-              'time':
-                  '${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}',
-            };
-          } catch (_) {
-            return {'name': 'Cliente', 'service': 'Servicio', 'time': '--:--'};
-          }
-        }).toList();
-      }
-    } catch (e) {
-      print('Error loading upcoming appointments: $e');
-    }
+    } catch (_) {}
   }
 
   @override

@@ -101,7 +101,7 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Future<void> _deleteUser(int id) async {
-    final confirm = await _showConfirmDialog('Â¿Eliminar este usuario?');
+    final confirm = await _showConfirmDialog('¿Eliminar este usuario?');
     if (!confirm) return;
     try {
       final response = await ApiService.delete(ApiConstants.userDetail(id));
@@ -143,8 +143,8 @@ class _UsersScreenState extends State<UsersScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-          body:
-              Center(child: CircularProgressIndicator(color: AppTheme.primary)));
+          body: Center(
+              child: CircularProgressIndicator(color: AppTheme.primary)));
     }
 
     if (_errorMessage != null) {
@@ -393,9 +393,13 @@ class _UserFormScreenState extends State<UserFormScreen> {
   late TextEditingController _emailCtrl;
   late TextEditingController _telefonoCtrl;
   late TextEditingController _passwordCtrl;
+  late TextEditingController _documentCtrl;
   String? _selectedRole;
+  String? _selectedDocType;
   bool _isSaving = false;
   bool _showPassword = false;
+
+  static const _docTypes = ['CC', 'TI', 'CE', 'Pasaporte', 'NIT'];
 
   bool get _isEditing => widget.user != null;
 
@@ -407,7 +411,11 @@ class _UserFormScreenState extends State<UserFormScreen> {
     _emailCtrl = TextEditingController(text: widget.user?.correo ?? '');
     _telefonoCtrl = TextEditingController(text: widget.user?.telefono ?? '');
     _passwordCtrl = TextEditingController();
+    _documentCtrl = TextEditingController(text: widget.user?.document ?? '');
     _selectedRole = widget.user?.rol;
+    _selectedDocType = widget.user?.documentType.isNotEmpty == true
+        ? widget.user!.documentType
+        : null;
   }
 
   @override
@@ -417,6 +425,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
     _emailCtrl.dispose();
     _telefonoCtrl.dispose();
     _passwordCtrl.dispose();
+    _documentCtrl.dispose();
     super.dispose();
   }
 
@@ -425,12 +434,15 @@ class _UserFormScreenState extends State<UserFormScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final body = {
+      final body = <String, dynamic>{
         'firstName': _nombreCtrl.text.trim(),
         'lastName': _apellidoCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'phone': _telefonoCtrl.text.trim(),
         'role': _selectedRole,
+        if (_selectedDocType != null) 'documentType': _selectedDocType,
+        if (_documentCtrl.text.trim().isNotEmpty)
+          'document': _documentCtrl.text.trim(),
         if (!_isEditing && _passwordCtrl.text.isNotEmpty)
           'password': _passwordCtrl.text,
       };
@@ -439,25 +451,24 @@ class _UserFormScreenState extends State<UserFormScreen> {
           ? await ApiService.put(ApiConstants.userDetail(widget.user!.id), body)
           : await ApiService.post(ApiConstants.users, body);
 
-      final successCode = _isEditing ? 200 : 201;
-
-      if (response.statusCode == successCode || response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEditing
+        SnackBarHelper.showSuccess(
+            context,
+            _isEditing
                 ? 'Usuario actualizado correctamente'
-                : 'Usuario creado correctamente'),
-            backgroundColor: AppTheme.colorSuccess,
-          ),
-        );
+                : 'Usuario creado correctamente');
         Navigator.pop(context, true);
       } else {
         final error = jsonDecode(response.body);
-        throw Exception(error['message'] ?? 'Error al guardar');
+        final msg = error['error']?.toString() ??
+            error['message']?.toString() ??
+            'Error al guardar';
+        SnackBarHelper.showError(context, msg);
       }
     } catch (e) {
-      SnackBarHelper.showError(context, e.toString());
+      SnackBarHelper.showError(
+          context, e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -466,130 +477,135 @@ class _UserFormScreenState extends State<UserFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Editar Usuario' : 'Nuevo Usuario'),
-      ),
+      appBar:
+          AppBar(title: Text(_isEditing ? 'Editar Usuario' : 'Nuevo Usuario')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nombreCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _apellidoCtrl,
-                decoration: const InputDecoration(
+          child: Column(children: [
+            // Nombre
+            TextFormField(
+              controller: _nombreCtrl,
+              decoration: const InputDecoration(
+                  labelText: 'Nombre', prefixIcon: Icon(Icons.person_outline)),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Requerido' : null,
+            ),
+            const SizedBox(height: 16),
+            // Apellido
+            TextFormField(
+              controller: _apellidoCtrl,
+              decoration: const InputDecoration(
                   labelText: 'Apellido',
-                  prefixIcon: Icon(Icons.person_2_outlined),
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                readOnly: _isEditing,
-                decoration: InputDecoration(
+                  prefixIcon: Icon(Icons.person_2_outlined)),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Requerido' : null,
+            ),
+            const SizedBox(height: 16),
+            // Email — editable siempre
+            TextFormField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
                   labelText: 'Correo electrónico',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  filled: _isEditing,
-                  fillColor:
-                      _isEditing ? AppTheme.border.withOpacity(0.3) : null,
+                  prefixIcon: Icon(Icons.email_outlined)),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Requerido';
+                if (!v.contains('@')) return 'Correo inválido';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            // Teléfono
+            TextFormField(
+              controller: _telefonoCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                  labelText: 'Teléfono',
+                  prefixIcon: Icon(Icons.phone_outlined)),
+            ),
+            const SizedBox(height: 16),
+            // Tipo de documento
+            DropdownButtonFormField<String>(
+              value: _selectedDocType,
+              decoration: const InputDecoration(
+                  labelText: 'Tipo de documento',
+                  prefixIcon: Icon(Icons.badge_outlined)),
+              items: _docTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedDocType = v),
+            ),
+            const SizedBox(height: 16),
+            // Número de documento
+            TextFormField(
+              controller: _documentCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                  labelText: 'Número de documento',
+                  prefixIcon: Icon(Icons.numbers_outlined)),
+            ),
+            const SizedBox(height: 16),
+            // Rol
+            DropdownButtonFormField<String>(
+              value: _selectedRole,
+              decoration: const InputDecoration(
+                  labelText: 'Rol',
+                  prefixIcon: Icon(Icons.manage_accounts_outlined)),
+              items: widget.roles.map((role) {
+                final name = role['name']?.toString() ??
+                    role['nombre']?.toString() ??
+                    '';
+                return DropdownMenuItem(value: name, child: Text(name));
+              }).toList(),
+              onChanged: (v) => setState(() => _selectedRole = v),
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Selecciona un rol' : null,
+            ),
+            const SizedBox(height: 16),
+            // Contraseña (solo al crear)
+            if (!_isEditing)
+              TextFormField(
+                controller: _passwordCtrl,
+                obscureText: !_showPassword,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(_showPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
+                  ),
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Requerido';
-                  if (!v.contains('@')) return 'Correo inválido';
+                  if (!_isEditing && (v == null || v.isEmpty))
+                    return 'Requerido';
+                  if (!_isEditing && v!.length < 6)
+                    return 'Mínimo 6 caracteres';
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _telefonoCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Teléfono',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _save,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : Text(_isEditing ? 'Guardar Cambios' : 'Crear Usuario'),
               ),
-              const SizedBox(height: 16),
-
-              // Selector de rol
-              DropdownButtonFormField<String>(
-                initialValue: _selectedRole,
-                decoration: const InputDecoration(
-                  labelText: 'Rol',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                ),
-                items: widget.roles.map((role) {
-                  final name = role['name']?.toString() ??
-                      role['nombre']?.toString() ??
-                      role['role']?.toString() ??
-                      '';
-                  return DropdownMenuItem(value: name, child: Text(name));
-                }).toList(),
-                onChanged: (v) => setState(() => _selectedRole = v),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Selecciona un rol' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // Contraseña (solo al crear)
-              if (!_isEditing)
-                TextFormField(
-                  controller: _passwordCtrl,
-                  obscureText: !_showPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(_showPassword
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () =>
-                          setState(() => _showPassword = !_showPassword),
-                    ),
-                  ),
-                  validator: (v) {
-                    if (!_isEditing && (v == null || v.isEmpty)) {
-                      return 'Requerido';
-                    }
-                    if (!_isEditing && v!.length < 6) {
-                      return 'Mínimo 6 caracteres';
-                    }
-                    return null;
-                  },
-                ),
-
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _save,
-                  child: _isSaving
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text(_isEditing ? 'Guardar Cambios' : 'Crear Usuario'),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 20),
+          ]),
         ),
       ),
     );
   }
 }
-
-

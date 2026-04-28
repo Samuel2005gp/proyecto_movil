@@ -8,7 +8,6 @@ import '../../core/models/sale_model.dart';
 
 class SaleScreen extends StatefulWidget {
   const SaleScreen({super.key});
-
   @override
   State<SaleScreen> createState() => _SaleScreenState();
 }
@@ -31,19 +30,12 @@ class _SaleScreenState extends State<SaleScreen> {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       final response = await ApiService.get(ApiConstants.sales);
-
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        // Debug: imprime el primer elemento para ver la estructura
-        if (data.isNotEmpty) {
-          print('SALE FIELDS: ${data[0].keys.toList()}');
-          print('SALE SAMPLE: ${data[0]}');
-        }
         setState(() {
-          _sales = data.map((json) => SaleModel.fromJson(json)).toList();
+          _sales = data.map((j) => SaleModel.fromJson(j)).toList();
           _calculateTotals();
           _isLoading = false;
         });
@@ -62,62 +54,49 @@ class _SaleScreenState extends State<SaleScreen> {
     final now = DateTime.now();
     _totalToday = 0;
     _totalMonth = 0;
-
-    for (var sale in _sales) {
-      final saleDate = sale.createdAt;
-      if (saleDate.year == now.year &&
-          saleDate.month == now.month &&
-          saleDate.day == now.day) {
+    for (final sale in _sales) {
+      if (sale.fecha.year == now.year &&
+          sale.fecha.month == now.month &&
+          sale.fecha.day == now.day) {
         _totalToday += sale.total;
       }
-      if (saleDate.year == now.year && saleDate.month == now.month) {
+      if (sale.fecha.year == now.year && sale.fecha.month == now.month) {
         _totalMonth += sale.total;
       }
     }
   }
 
   Future<void> _deleteSale(int id) async {
-    final confirm = await _showConfirmDialog('Â¿Eliminar esta venta?');
+    final confirm = await _showConfirmDialog('¿Eliminar esta venta?');
     if (!confirm) return;
-
     try {
       final response = await ApiService.delete(ApiConstants.saleDetail(id));
       if (response.statusCode == 200) {
-        _showSuccess('Venta eliminada exitosamente');
+        SnackBarHelper.showSuccess(context, 'Venta eliminada exitosamente');
         _loadSales();
       } else {
-        throw Exception('Error al eliminar venta');
+        final err = jsonDecode(response.body);
+        SnackBarHelper.showError(
+            context, err['error']?.toString() ?? 'Error al eliminar');
       }
     } catch (e) {
-      _showError(e.toString());
+      SnackBarHelper.showError(context, e.toString());
     }
-  }
-
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppTheme.colorSuccess),
-    );
-  }
-
-  void _showError(String message) {
-    SnackBarHelper.showError(context, message);
   }
 
   Future<bool> _showConfirmDialog(String message) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Confirmar'),
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirmar'),
-          ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirmar')),
         ],
       ),
     );
@@ -128,33 +107,38 @@ class _SaleScreenState extends State<SaleScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
-      );
+          body: Center(
+              child: CircularProgressIndicator(color: AppTheme.primary)));
     }
-
     if (_errorMessage != null) {
       return Scaffold(
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline,
-                  size: 60, color: AppTheme.destructive),
-              const SizedBox(height: 16),
-              Text(_errorMessage!),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadSales,
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
+            child:
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.error_outline,
+              size: 60, color: AppTheme.destructive),
+          const SizedBox(height: 16),
+          Text(_errorMessage!),
+          const SizedBox(height: 16),
+          ElevatedButton(
+              onPressed: _loadSales, child: const Text('Reintentar')),
+        ])),
       );
     }
 
     return Scaffold(
       backgroundColor: AppTheme.background,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final created = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateSaleScreen()),
+          );
+          if (created == true) _loadSales();
+        },
+        backgroundColor: AppTheme.primary,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadSales,
@@ -162,13 +146,11 @@ class _SaleScreenState extends State<SaleScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               _buildHeader(),
-              const SizedBox(height: 25),
+              const SizedBox(height: 20),
               _buildSummaryCards(),
               const SizedBox(height: 20),
-              _buildFilterButtons(),
-              const SizedBox(height: 20),
               _buildSalesList(),
-              const SizedBox(height: 50),
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -177,53 +159,25 @@ class _SaleScreenState extends State<SaleScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Ventas",
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                "${_sales.length} transacciones",
-                style: const TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-          const CircleAvatar(
-            backgroundColor: Colors.white,
-            child: Icon(Icons.add, color: AppTheme.primary),
-          ),
-        ],
-      ),
-    );
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Ventas',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 4),
+      Text('${_sales.length} transacciones',
+          style: const TextStyle(fontSize: 14, color: AppTheme.muted)),
+    ]);
   }
 
   Widget _buildSummaryCards() {
-    return Row(
-      children: [
-        Expanded(
-            child: _buildSummaryCard(Icons.attach_money, "Hoy",
-                "\$${_totalToday.toStringAsFixed(0)}")),
-        const SizedBox(width: 10),
-        Expanded(
-            child: _buildSummaryCard(Icons.trending_up, "Este mes",
-                "\$${_totalMonth.toStringAsFixed(0)}")),
-      ],
-    );
+    return Row(children: [
+      Expanded(
+          child: _buildSummaryCard(
+              Icons.today, 'Hoy', '\$${_totalToday.toStringAsFixed(0)}')),
+      const SizedBox(width: 12),
+      Expanded(
+          child: _buildSummaryCard(Icons.calendar_month, 'Este mes',
+              '\$${_totalMonth.toStringAsFixed(0)}')),
+    ]);
   }
 
   Widget _buildSummaryCard(IconData icon, String label, String value) {
@@ -234,57 +188,20 @@ class _SaleScreenState extends State<SaleScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 6,
-              offset: const Offset(0, 2)),
+              offset: const Offset(0, 2))
         ],
       ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppTheme.primary, size: 30),
-          const SizedBox(height: 8),
-          Text(label,
-              style: const TextStyle(fontSize: 13, color: AppTheme.muted)),
-          const SizedBox(height: 3),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterButtons() {
-    return Row(
-      children: [
-        Expanded(child: _buildRoundedButton(Icons.filter_list, "Filtrar")),
-        const SizedBox(width: 10),
-        Expanded(child: _buildRoundedButton(Icons.upload, "Exportar")),
-      ],
-    );
-  }
-
-  Widget _buildRoundedButton(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.card,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 4,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18, color: AppTheme.muted),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 14)),
-        ],
-      ),
+      child: Column(children: [
+        Icon(icon, color: AppTheme.primary, size: 28),
+        const SizedBox(height: 8),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
+        const SizedBox(height: 4),
+        Text(value,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      ]),
     );
   }
 
@@ -292,7 +209,7 @@ class _SaleScreenState extends State<SaleScreen> {
     if (_sales.isEmpty) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.all(32.0),
+          padding: EdgeInsets.all(32),
           child: Text('No hay ventas registradas',
               style: TextStyle(color: AppTheme.muted)),
         ),
@@ -302,87 +219,93 @@ class _SaleScreenState extends State<SaleScreen> {
   }
 
   Widget _buildSaleCard(SaleModel sale) {
+    final statusColor = _getStatusColor(sale.estado);
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 5,
-              offset: const Offset(0, 3)),
+              offset: const Offset(0, 3))
         ],
       ),
-      child: Row(
-        children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.shopping_bag,
-                color: AppTheme.primary, size: 28),
+            child: const Icon(Icons.receipt_long,
+                color: AppTheme.primary, size: 24),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sale.clienteNombre ?? 'Cliente',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  sale.servicioNombre ?? 'Servicio',
-                  style: const TextStyle(color: AppTheme.muted),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "${_formatDate(sale.createdAt)}   â€¢   ${sale.metodoPago}",
-                  style: const TextStyle(color: AppTheme.muted, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                "\$${sale.total.toStringAsFixed(0)}",
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(sale.clienteNombre,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
+                Text(sale.servicioNombre,
+                    style:
+                        const TextStyle(fontSize: 12, color: AppTheme.muted)),
+                Text(_formatDate(sale.fecha),
+                    style:
+                        const TextStyle(fontSize: 11, color: AppTheme.muted)),
+              ])),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text('\$${sale.total.toStringAsFixed(0)}',
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primary,
-                    fontSize: 16),
+                    fontSize: 16)),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(sale.estado).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  sale.estado,
+              child: Text(sale.estado,
                   style: TextStyle(
-                    color: _getStatusColor(sale.estado),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        ]),
+        if (sale.metodoPago.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Row(children: [
+            const Icon(Icons.payment, size: 14, color: AppTheme.muted),
+            const SizedBox(width: 4),
+            Text(_capitalize(sale.metodoPago),
+                style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
+            if (sale.descuento > 0) ...[
+              const SizedBox(width: 12),
+              const Icon(Icons.discount_outlined,
+                  size: 14, color: AppTheme.muted),
+              const SizedBox(width: 4),
+              Text('Desc: \$${sale.descuento.toStringAsFixed(0)}',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
             ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppTheme.destructive),
-            onPressed: () => _deleteSale(sale.id),
-          ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.delete_outline,
+                  color: AppTheme.destructive, size: 20),
+              onPressed: () => _deleteSale(sale.id),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ]),
         ],
-      ),
+      ]),
     );
   }
 
@@ -391,15 +314,19 @@ class _SaleScreenState extends State<SaleScreen> {
     if (date.year == now.year &&
         date.month == now.month &&
         date.day == now.day) {
-      return "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+      return 'Hoy ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     }
-    return "${date.day}/${date.month}/${date.year}";
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
+      case 'activo':
+        return AppTheme.colorSuccess;
       case 'completada':
-      case 'pagado':
         return AppTheme.colorSuccess;
       case 'pendiente':
         return AppTheme.colorEdit;
@@ -408,5 +335,461 @@ class _SaleScreenState extends State<SaleScreen> {
       default:
         return AppTheme.muted;
     }
+  }
+}
+
+// ── CREAR VENTA ──────────────────────────────────────────────────────────────
+class CreateSaleScreen extends StatefulWidget {
+  const CreateSaleScreen({super.key});
+  @override
+  State<CreateSaleScreen> createState() => _CreateSaleScreenState();
+}
+
+class _CreateSaleScreenState extends State<CreateSaleScreen> {
+  // tipo: 'cita' o 'directo'
+  String _tipo = 'cita';
+  bool _isSaving = false;
+  bool _isLoadingData = true;
+
+  // Para venta por cita
+  List<Map<String, dynamic>> _citasDisponibles = [];
+  Map<String, dynamic>? _citaSeleccionada;
+
+  // Para venta directa
+  List<Map<String, dynamic>> _servicios = [];
+  List<Map<String, dynamic>> _clientes = [];
+  int? _clienteSeleccionado;
+  final List<Map<String, dynamic>> _serviciosAgregados = [];
+  int? _servicioSeleccionado;
+  double _descuento = 0;
+
+  String? _metodoPago;
+  final List<String> _metodosPago = [
+    'efectivo',
+    'tarjeta',
+    'transferencia',
+    'nequi',
+    'daviplata'
+  ];
+  final _descuentoCtrl = TextEditingController(text: '0');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _descuentoCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoadingData = true);
+    try {
+      final results = await Future.wait([
+        ApiService.get(ApiConstants.salesAppointments),
+        ApiService.get(ApiConstants.services),
+        ApiService.get(ApiConstants.clients),
+      ]);
+      if (results[0].statusCode == 200) {
+        final data = jsonDecode(results[0].body) as List;
+        _citasDisponibles = data.cast<Map<String, dynamic>>();
+      }
+      if (results[1].statusCode == 200) {
+        final data = jsonDecode(results[1].body) as List;
+        _servicios = data
+            .map((s) => {
+                  'id': s['id'],
+                  'name': s['name'] ?? s['nombre'] ?? '',
+                  'price': (s['price'] ?? s['precio'] ?? 0).toDouble(),
+                })
+            .toList();
+      }
+      if (results[2].statusCode == 200) {
+        final data = jsonDecode(results[2].body) as List;
+        _clientes = data
+            .map((c) => {
+                  'id': c['id'] ?? c['PK_id_cliente'],
+                  'name':
+                      '${c['nombre'] ?? c['firstName'] ?? ''} ${c['apellido'] ?? c['lastName'] ?? ''}'
+                          .trim(),
+                })
+            .toList();
+      }
+    } catch (_) {}
+    setState(() => _isLoadingData = false);
+  }
+
+  double get _subtotal {
+    if (_tipo == 'cita' && _citaSeleccionada != null) {
+      return (_citaSeleccionada!['price'] ?? 0).toDouble();
+    }
+    return _serviciosAgregados.fold(
+        0.0, (s, item) => s + (item['price'] as double));
+  }
+
+  double get _total => (_subtotal - _descuento).clamp(0, double.infinity);
+
+  Future<void> _save() async {
+    if (_metodoPago == null) {
+      SnackBarHelper.showError(context, 'Selecciona un método de pago');
+      return;
+    }
+    if (_tipo == 'cita' && _citaSeleccionada == null) {
+      SnackBarHelper.showError(context, 'Selecciona una cita');
+      return;
+    }
+    if (_tipo == 'directo' && _serviciosAgregados.isEmpty) {
+      SnackBarHelper.showError(context, 'Agrega al menos un servicio');
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      final body = <String, dynamic>{
+        'tipo': _tipo,
+        'metodoPago': _metodoPago,
+        'descuento': _descuento,
+      };
+
+      if (_tipo == 'cita') {
+        body['citaId'] = _citaSeleccionada!['id'];
+      } else {
+        if (_clienteSeleccionado != null)
+          body['clienteId'] = _clienteSeleccionado;
+        body['servicios'] = _serviciosAgregados
+            .map((s) => {
+                  'id': s['id'],
+                  'precio': s['price'],
+                  'qty': 1,
+                })
+            .toList();
+      }
+
+      final response = await ApiService.post(ApiConstants.sales, body);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        if (!mounted) return;
+        SnackBarHelper.showSuccess(context, 'Venta registrada exitosamente');
+        Navigator.pop(context, true);
+      } else {
+        final err = jsonDecode(response.body);
+        SnackBarHelper.showError(
+            context, err['error']?.toString() ?? 'Error al registrar venta');
+      }
+    } catch (e) {
+      SnackBarHelper.showError(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Nueva Venta')),
+      body: _isLoadingData
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tipo de venta
+                    const Text('Tipo de venta *',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(
+                          child: _buildTipoBtn(
+                              'cita', 'Desde cita', Icons.calendar_today)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _buildTipoBtn(
+                              'directo', 'Venta directa', Icons.point_of_sale)),
+                    ]),
+                    const SizedBox(height: 20),
+
+                    if (_tipo == 'cita') ...[
+                      const Text('Cita *',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<Map<String, dynamic>>(
+                        value: _citaSeleccionada,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                            hintText: 'Selecciona una cita'),
+                        items: _citasDisponibles
+                            .map((c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(
+                                    '${c['clientName']} — ${c['service']} (${c['date']})',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (v) => setState(() => _citaSeleccionada = v),
+                      ),
+                      if (_citaSeleccionada != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: AppTheme.primary.withValues(alpha: 0.2)),
+                          ),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    'Cliente: ${_citaSeleccionada!['clientName']}',
+                                    style: const TextStyle(fontSize: 13)),
+                                Text(
+                                    'Servicio: ${_citaSeleccionada!['service']}',
+                                    style: const TextStyle(
+                                        fontSize: 13, color: AppTheme.muted)),
+                                Text(
+                                    'Precio: \$${(_citaSeleccionada!['price'] ?? 0).toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold)),
+                              ]),
+                        ),
+                      ],
+                    ] else ...[
+                      // Cliente (opcional para venta directa)
+                      const Text('Cliente (opcional)',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<int>(
+                        value: _clienteSeleccionado,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                            hintText: 'Selecciona un cliente'),
+                        items: _clientes
+                            .map((c) => DropdownMenuItem<int>(
+                                  value: c['id'] as int,
+                                  child: Text(c['name'],
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _clienteSeleccionado = v),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Servicios
+                      const Text('Servicios *',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _servicioSeleccionado,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                                hintText: 'Selecciona servicio'),
+                            items: _servicios
+                                .map((s) => DropdownMenuItem<int>(
+                                      value: s['id'] as int,
+                                      child: Text(
+                                          '${s['name']} — \$${(s['price'] as double).toStringAsFixed(0)}',
+                                          overflow: TextOverflow.ellipsis),
+                                    ))
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _servicioSeleccionado = v),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (_servicioSeleccionado == null) return;
+                            final s = _servicios.firstWhere(
+                                (x) => x['id'] == _servicioSeleccionado);
+                            setState(() {
+                              _serviciosAgregados.add({...s});
+                              _servicioSeleccionado = null;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.all(14)),
+                          child: const Icon(Icons.add),
+                        ),
+                      ]),
+                      if (_serviciosAgregados.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ..._serviciosAgregados
+                            .asMap()
+                            .entries
+                            .map((e) => ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.check_circle,
+                                      color: AppTheme.colorSuccess, size: 18),
+                                  title: Text(e.value['name'],
+                                      style: const TextStyle(fontSize: 13)),
+                                  trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                            '\$${(e.value['price'] as double).toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                        IconButton(
+                                          icon: const Icon(Icons.close,
+                                              size: 16,
+                                              color: AppTheme.destructive),
+                                          onPressed: () => setState(() =>
+                                              _serviciosAgregados
+                                                  .removeAt(e.key)),
+                                        ),
+                                      ]),
+                                )),
+                      ],
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Descuento
+                    const Text('Descuento (\$)',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _descuentoCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.discount_outlined)),
+                      onChanged: (v) =>
+                          setState(() => _descuento = double.tryParse(v) ?? 0),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Método de pago
+                    const Text('Método de pago *',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _metodoPago,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                          hintText: 'Selecciona método de pago'),
+                      items: _metodosPago
+                          .map((m) => DropdownMenuItem(
+                                value: m,
+                                child:
+                                    Text(m[0].toUpperCase() + m.substring(1)),
+                              ))
+                          .toList(),
+                      onChanged: (v) => setState(() => _metodoPago = v),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Resumen
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.border),
+                      ),
+                      child: Column(children: [
+                        _buildResumenRow(
+                            'Subtotal', '\$${_subtotal.toStringAsFixed(0)}'),
+                        if (_descuento > 0)
+                          _buildResumenRow('Descuento',
+                              '-\$${_descuento.toStringAsFixed(0)}',
+                              color: AppTheme.colorSuccess),
+                        const Divider(),
+                        _buildResumenRow(
+                            'Total', '\$${_total.toStringAsFixed(0)}',
+                            bold: true, color: AppTheme.primary),
+                      ]),
+                    ),
+                    const SizedBox(height: 32),
+
+                    Row(children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _save,
+                          child: _isSaving
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Text('Registrar Venta'),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 20),
+                  ]),
+            ),
+    );
+  }
+
+  Widget _buildTipoBtn(String tipo, String label, IconData icon) {
+    final selected = _tipo == tipo;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _tipo = tipo;
+        _citaSeleccionada = null;
+        _serviciosAgregados.clear();
+      }),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primary : AppTheme.card,
+          borderRadius: BorderRadius.circular(10),
+          border:
+              Border.all(color: selected ? AppTheme.primary : AppTheme.border),
+        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, size: 18, color: selected ? Colors.white : AppTheme.muted),
+          const SizedBox(width: 8),
+          Text(label,
+              style: TextStyle(
+                color: selected ? Colors.white : AppTheme.foreground,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              )),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildResumenRow(String label, String value,
+      {bool bold = false, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label,
+            style: TextStyle(
+                color: AppTheme.muted,
+                fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+        Text(value,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              color: color ?? AppTheme.foreground,
+              fontSize: bold ? 16 : 14,
+            )),
+      ]),
+    );
   }
 }

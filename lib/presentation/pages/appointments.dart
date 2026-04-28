@@ -47,13 +47,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       } else {
         endpoint = ApiConstants.appointments;
       }
-
       final response = await ApiService.get(endpoint);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
           _allAppointments =
-              data.map((json) => AppointmentModel.fromJson(json)).toList();
+              data.map((j) => AppointmentModel.fromJson(j)).toList();
           _isLoading = false;
         });
       } else {
@@ -67,14 +66,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
   }
 
-  // Filtra citas por dia usando el campo "Fecha" (yyyy-MM-dd)
   List<AppointmentModel> _getAppointmentsOfDay(DateTime day) {
     final dayStr = DateFormat('yyyy-MM-dd').format(day);
     return _allAppointments.where((a) => a.fecha == dayStr).toList();
   }
 
   Future<void> _deleteAppointment(AppointmentModel appointment) async {
-    // Validar si se puede eliminar según el estado
     if (appointment.estado == 'Completada') {
       _showError('No se puede eliminar una cita completada');
       return;
@@ -83,12 +80,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       _showError('No se puede eliminar una cita ya cancelada');
       return;
     }
-
     final confirm = await _showConfirmDialog(
       '¿Eliminar la cita de ${appointment.clienteNombre.isNotEmpty ? appointment.clienteNombre : "este cliente"}?\n\nEsta acción no se puede deshacer.',
     );
     if (!confirm) return;
-
     try {
       final response = await ApiService.delete(
           ApiConstants.appointmentDetail(appointment.id));
@@ -96,12 +91,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         _showSuccess('Cita eliminada correctamente');
         _loadAppointments();
       } else {
-        String errorMsg = 'Error al eliminar';
-        try {
-          final error = jsonDecode(response.body);
-          errorMsg = error['message']?.toString() ?? errorMsg;
-        } catch (_) {}
-        _showError(errorMsg);
+        final error = jsonDecode(response.body);
+        _showError(error['error']?.toString() ?? 'Error al eliminar');
       }
     } catch (e) {
       _showError(
@@ -111,7 +102,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Future<void> _changeStatus(
       AppointmentModel appointment, String newStatus) async {
-    // Validaciones según estado actual
     if (appointment.estado == 'Completada') {
       _showError('Esta cita ya está completada y no puede modificarse');
       return;
@@ -124,29 +114,23 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       _showError('La cita ya tiene el estado "$newStatus"');
       return;
     }
-
-    // Validar que la fecha no sea pasada para completar
     if (newStatus == 'Completada') {
       final fechaHora =
           DateTime.tryParse('${appointment.fecha} ${appointment.horario}');
       if (fechaHora != null && fechaHora.isAfter(DateTime.now())) {
         final confirm = await _showConfirmDialog(
-          'La cita es futura. ¿Deseas marcarla como completada de todas formas?',
-        );
+            'La cita es futura. ¿Deseas marcarla como completada de todas formas?');
         if (!confirm) return;
       }
     }
-
     final accion = newStatus == 'Completada' ? 'completar' : 'cancelar';
     final confirm = await _showConfirmDialog('¿Deseas $accion esta cita?');
     if (!confirm) return;
-
     try {
-      // El backend espera status en inglés: 'completed' o 'cancelled'
       final statusMap = {
         'Completada': 'completed',
         'Cancelada': 'cancelled',
-        'Pendiente': 'pending',
+        'Pendiente': 'pending'
       };
       final statusEn = statusMap[newStatus] ?? newStatus.toLowerCase();
       final response = await ApiService.patch(
@@ -157,12 +141,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         _showSuccess('Cita marcada como $newStatus');
         _loadAppointments();
       } else {
-        String errorMsg = 'Error al cambiar estado';
-        try {
-          final error = jsonDecode(response.body);
-          errorMsg = error['message']?.toString() ?? errorMsg;
-        } catch (_) {}
-        _showError(errorMsg);
+        final error = jsonDecode(response.body);
+        _showError(error['error']?.toString() ?? 'Error al cambiar estado');
       }
     } catch (e) {
       _showError(
@@ -175,27 +155,69 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Future<bool> _showConfirmDialog(String message) async {
     final result = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-                title: const Text('Confirmar'),
-                content: Text(message),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancelar')),
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Confirmar')),
-                ]));
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar'),
+        content: Text(message),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirmar')),
+        ],
+      ),
+    );
     return result ?? false;
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completada':
+        return const Color(0xFFD97706);
+      case 'pendiente':
+        return const Color(0xFF1D4ED8);
+      case 'cancelada':
+        return const Color(0xFFDC2626);
+      default:
+        return AppTheme.muted;
+    }
+  }
+
+  Color _getStatusBgColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completada':
+        return const Color(0xFFFEF9C3);
+      case 'pendiente':
+        return const Color(0xFFDBEAFE);
+      case 'cancelada':
+        return const Color(0xFFFCE7F3);
+      default:
+        return const Color(0xFFF3F4F6);
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'completada':
+        return Icons.check_circle_rounded;
+      case 'pendiente':
+        return Icons.schedule_rounded;
+      case 'cancelada':
+        return Icons.cancel_rounded;
+      default:
+        return Icons.help_outline;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(
           body: Center(
               child: CircularProgressIndicator(color: AppTheme.primary)));
+    }
     if (_errorMessage != null) {
       return Scaffold(
           body: Center(
@@ -211,6 +233,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 onPressed: _loadAppointments, child: const Text('Reintentar')),
           ])));
     }
+
+    final dayAppointments = _getAppointmentsOfDay(_selectedDay!);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -230,14 +254,16 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           onRefresh: _loadAppointments,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _buildHeader(),
+              _buildHeader(dayAppointments.length),
               const SizedBox(height: 20),
               _buildCalendarCard(),
-              const SizedBox(height: 32),
-              _buildDayAppointments(),
+              const SizedBox(height: 8),
+              _buildLegend(),
+              const SizedBox(height: 28),
+              _buildDayAppointments(dayAppointments),
               const SizedBox(height: 80),
             ]),
           ),
@@ -246,27 +272,57 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Citas',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 5),
-      Text(DateFormat('dd/MM/yyyy').format(_selectedDay!),
-          style: const TextStyle(fontSize: 14, color: AppTheme.muted)),
+  Widget _buildHeader(int count) {
+    final isToday = _selectedDay!.year == DateTime.now().year &&
+        _selectedDay!.month == DateTime.now().month &&
+        _selectedDay!.day == DateTime.now().day;
+
+    return Row(children: [
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Citas',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(
+          isToday
+              ? 'Hoy, ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}'
+              : DateFormat('dd/MM/yyyy').format(_selectedDay!),
+          style: const TextStyle(fontSize: 13, color: AppTheme.muted),
+        ),
+      ])),
+      if (count > 0)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.primary,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$count ${count == 1 ? 'cita' : 'citas'}',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+        ),
     ]);
   }
 
   Widget _buildCalendarCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.circular(22),
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
+        ],
+        border: Border.all(
+            color: AppTheme.primary.withValues(alpha: 0.15), width: 1.5),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: AppTheme.card, borderRadius: BorderRadius.circular(18)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
         child: TableCalendar(
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
@@ -277,49 +333,104 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               day.day == _selectedDay!.day,
           availableCalendarFormats: const {CalendarFormat.month: 'Mes'},
           eventLoader: _getAppointmentsOfDay,
+          headerStyle: HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+            titleTextStyle:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            leftChevronIcon:
+                Icon(Icons.chevron_left_rounded, color: AppTheme.primary),
+            rightChevronIcon:
+                Icon(Icons.chevron_right_rounded, color: AppTheme.primary),
+            headerPadding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          daysOfWeekStyle: const DaysOfWeekStyle(
+            weekdayStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.muted),
+            weekendStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.muted),
+          ),
           calendarStyle: const CalendarStyle(
             markersMaxCount: 3,
+            outsideDaysVisible: true,
+            outsideTextStyle: TextStyle(color: AppTheme.muted, fontSize: 13),
+            defaultTextStyle: TextStyle(fontSize: 13),
+            weekendTextStyle: TextStyle(fontSize: 13),
           ),
           calendarBuilders: CalendarBuilders(
             markerBuilder: (context, date, events) {
               if (events.isEmpty) return const SizedBox.shrink();
               final appointments = events.cast<AppointmentModel>();
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: appointments.take(3).map((a) {
-                  return Container(
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.symmetric(horizontal: 1),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(a.estado),
-                      shape: BoxShape.circle,
-                    ),
-                  );
-                }).toList(),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: appointments.take(3).map((a) {
+                    final color = _getStatusColor(a.estado);
+                    return Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                              color: color.withValues(alpha: 0.5),
+                              blurRadius: 3,
+                              spreadRadius: 0.5)
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               );
             },
             selectedBuilder: (context, date, _) => Center(
-                child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: const BoxDecoration(
-                        color: AppTheme.primary, shape: BoxShape.circle),
-                    alignment: Alignment.center,
-                    child: Text('${date.day}',
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 14)))),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppTheme.primary.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2))
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text('${date.day}',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
             todayBuilder: (context, date, _) => Center(
-                child: Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.3),
-                        shape: BoxShape.circle),
-                    alignment: Alignment.center,
-                    child: Text('${date.day}',
-                        style: const TextStyle(
-                            color: AppTheme.foreground, fontSize: 13)))),
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.4),
+                      width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text('${date.day}',
+                    style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
           ),
           onDaySelected: (selected, focused) {
             setState(() {
@@ -332,18 +443,79 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
-  Widget _buildDayAppointments() {
-    final appointments = _getAppointmentsOfDay(_selectedDay!);
+  Widget _buildLegend() {
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      _legendItem(AppTheme.colorEdit, 'Pendiente'),
+      const SizedBox(width: 16),
+      _legendItem(AppTheme.colorSuccess, 'Completada'),
+      const SizedBox(width: 16),
+      _legendItem(AppTheme.destructive, 'Cancelada'),
+    ]);
+  }
+
+  Widget _legendItem(Color color, String label) {
+    return Row(children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 3)
+          ],
+        ),
+      ),
+      const SizedBox(width: 5),
+      Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+    ]);
+  }
+
+  Widget _buildDayAppointments(List<AppointmentModel> appointments) {
+    final isToday = _selectedDay!.year == DateTime.now().year &&
+        _selectedDay!.month == DateTime.now().month &&
+        _selectedDay!.day == DateTime.now().day;
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Citas - ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 10),
+      Row(children: [
+        Text(
+          isToday ? 'Hoy' : DateFormat('dd/MM/yyyy').format(_selectedDay!),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+        ),
+        if (appointments.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text('${appointments.length}',
+                style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ]),
+      const SizedBox(height: 12),
       if (appointments.isEmpty)
-        const Center(
-            child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text('No hay citas para este dia',
-                    style: TextStyle(color: AppTheme.muted))))
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppTheme.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Column(children: [
+            Icon(Icons.calendar_today_outlined,
+                size: 40, color: AppTheme.muted.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+            const Text('Sin citas para este día',
+                style: TextStyle(color: AppTheme.muted, fontSize: 14)),
+          ]),
+        )
       else
         ...appointments.map((a) => _buildAppointmentCard(a)),
     ]);
@@ -351,108 +523,143 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Widget _buildAppointmentCard(AppointmentModel appointment) {
     final statusColor = _getStatusColor(appointment.estado);
+    final statusBg = _getStatusBgColor(appointment.estado);
+    final statusIcon = _getStatusIcon(appointment.estado);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-          color: AppTheme.card,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 6,
-                offset: const Offset(0, 3))
-          ]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-              padding: const EdgeInsets.all(12),
+        color: statusBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: statusColor, width: 4)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            // Hora destacada
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(25)),
-              child: Icon(Icons.access_time, color: statusColor)),
-          const SizedBox(width: 14),
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(
+                color: statusColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(appointment.horario,
+                  style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(
                     appointment.clienteNombre.isNotEmpty
                         ? appointment.clienteNombre
                         : 'Cliente',
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
-                Text(appointment.servicioNombre,
-                    style:
-                        const TextStyle(fontSize: 13, color: AppTheme.muted)),
-                if (appointment.empleadoNombre.isNotEmpty)
-                  Text(appointment.empleadoNombre,
+                        fontSize: 15, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(appointment.servicioNombre,
                       style:
-                          const TextStyle(fontSize: 12, color: AppTheme.muted)),
-              ])),
-          Text(appointment.horario,
-              style: const TextStyle(
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15)),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          const TextStyle(fontSize: 12, color: AppTheme.muted),
+                      overflow: TextOverflow.ellipsis),
+                ])),
+            // Badge de estado
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(appointment.estado,
-                  style: TextStyle(
-                      color: statusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold))),
-          const Spacer(),
-          if (appointment.estado == 'Pendiente') ...[
-            if (_userRole != 'Cliente') ...[
-              IconButton(
-                  icon: const Icon(Icons.check_circle,
-                      color: AppTheme.colorSuccess),
-                  onPressed: () => _changeStatus(appointment, 'Completada'),
-                  tooltip: 'Completar'),
-              IconButton(
-                  icon: const Icon(Icons.cancel, color: AppTheme.colorEdit),
-                  onPressed: () => _changeStatus(appointment, 'Cancelada'),
-                  tooltip: 'Cancelar'),
-            ],
-            if (_userRole == 'Cliente')
-              IconButton(
-                  icon: const Icon(Icons.cancel, color: AppTheme.colorEdit),
-                  onPressed: () => _changeStatus(appointment, 'Cancelada'),
-                  tooltip: 'Cancelar'),
+                color: statusColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(statusIcon, size: 12, color: statusColor),
+                const SizedBox(width: 4),
+                Text(appointment.estado,
+                    style: TextStyle(
+                        color: statusColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
+              ]),
+            ),
+          ]),
+
+          if (appointment.empleadoNombre.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(children: [
+              const Icon(Icons.person_outline, size: 13, color: AppTheme.muted),
+              const SizedBox(width: 4),
+              Text(appointment.empleadoNombre,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
+            ]),
           ],
-          if (_userRole == 'Admin')
-            IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: AppTheme.destructive),
-                onPressed: () => _deleteAppointment(appointment),
-                tooltip: 'Eliminar'),
+
+          if (appointment.notas != null && appointment.notas!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.notes_rounded, size: 13, color: AppTheme.muted),
+              const SizedBox(width: 4),
+              Expanded(
+                  child: Text(appointment.notas!,
+                      style:
+                          const TextStyle(fontSize: 12, color: AppTheme.muted),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis)),
+            ]),
+          ],
+
+          // Acciones
+          if (appointment.estado == 'Pendiente' || _userRole == 'Admin') ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 6),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              if (appointment.estado == 'Pendiente') ...[
+                if (_userRole != 'Cliente')
+                  _actionBtn(
+                      Icons.check_circle_outline,
+                      'Completar',
+                      AppTheme.colorSuccess,
+                      () => _changeStatus(appointment, 'Completada')),
+                _actionBtn(
+                    Icons.cancel_outlined,
+                    'Cancelar',
+                    AppTheme.colorEdit,
+                    () => _changeStatus(appointment, 'Cancelada')),
+              ],
+              if (_userRole == 'Admin')
+                _actionBtn(
+                    Icons.delete_outline,
+                    'Eliminar',
+                    AppTheme.destructive,
+                    () => _deleteAppointment(appointment)),
+            ]),
+          ],
         ]),
-        if (appointment.notas != null && appointment.notas!.isNotEmpty) ...[
-          const Divider(),
-          Text('Notas: ${appointment.notas}',
-              style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
-        ],
-      ]),
+      ),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completada':
-        return AppTheme.colorSuccess;
-      case 'pendiente':
-        return AppTheme.colorEdit;
-      case 'cancelada':
-        return AppTheme.destructive;
-      default:
-        return AppTheme.muted;
-    }
+  Widget _actionBtn(
+      IconData icon, String label, Color color, VoidCallback onTap) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 16, color: color),
+      label: Text(label, style: TextStyle(color: color, fontSize: 12)),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
   }
 }
