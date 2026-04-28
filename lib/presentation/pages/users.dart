@@ -120,6 +120,70 @@ class _UsersScreenState extends State<UsersScreen> {
 
   void _showError(String msg) => SnackBarHelper.showError(context, msg);
 
+  void _viewUser(UserModel user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Detalles del Usuario'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Nombre:', user.nombreCompleto),
+              _buildDetailRow('Email:', user.correo),
+              _buildDetailRow('Teléfono:',
+                  user.telefono.isNotEmpty ? user.telefono : 'No registrado'),
+              _buildDetailRow('Rol:', user.rol),
+              _buildDetailRow('Estado:', user.isActive ? 'Activo' : 'Inactivo'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.muted,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editUser(UserModel user) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserFormScreen(user: user, roles: _roles),
+      ),
+    ).then((updated) {
+      if (updated == true) _loadData();
+    });
+  }
+
   Future<bool> _showConfirmDialog(String msg) async {
     final result = await showDialog<bool>(
       context: context,
@@ -143,8 +207,8 @@ class _UsersScreenState extends State<UsersScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-          body:
-              Center(child: CircularProgressIndicator(color: AppTheme.primary)));
+          body: Center(
+              child: CircularProgressIndicator(color: AppTheme.primary)));
     }
 
     if (_errorMessage != null) {
@@ -269,89 +333,84 @@ class _UsersScreenState extends State<UsersScreen> {
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: user.isActive
-                ? AppTheme.primary.withOpacity(0.2)
-                : AppTheme.muted.withOpacity(0.2),
-            child: Text(initials,
-                style: TextStyle(
-                    color: user.isActive ? AppTheme.primary : AppTheme.muted,
-                    fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(user.nombreCompleto,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
-                Text(user.correo,
-                    style:
-                        const TextStyle(color: AppTheme.muted, fontSize: 12)),
-                const SizedBox(height: 4),
-                Row(
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: user.isActive
+                    ? AppTheme.primary.withOpacity(0.2)
+                    : AppTheme.muted.withOpacity(0.2),
+                child: Text(initials,
+                    style: TextStyle(
+                        color:
+                            user.isActive ? AppTheme.primary : AppTheme.muted,
+                        fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildChip(user.rol, AppTheme.colorPurple),
-                    const SizedBox(width: 6),
-                    _buildChip(
-                      user.isActive ? 'Activo' : 'Inactivo',
-                      user.isActive ? AppTheme.colorSuccess : AppTheme.muted,
+                    Text(user.nombreCompleto,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text(user.correo,
+                        style: const TextStyle(
+                            color: AppTheme.muted, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        _buildChip(user.rol, AppTheme.colorPurple),
+                        const SizedBox(width: 6),
+                        _buildChip(
+                          user.isActive ? 'Activo' : 'Inactivo',
+                          user.isActive
+                              ? AppTheme.colorSuccess
+                              : AppTheme.muted,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: AppTheme.muted),
-            onSelected: (value) {
-              switch (value) {
-                case 'edit':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => UserFormScreen(user: user, roles: _roles),
-                    ),
-                  ).then((updated) {
-                    if (updated == true) _loadData();
-                  });
-                  break;
-                case 'toggle':
-                  _toggleStatus(user);
-                  break;
-                case 'delete':
-                  _deleteUser(user.id);
-                  break;
-              }
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                  value: 'edit',
-                  child: ListTile(
-                      leading: Icon(Icons.edit, color: AppTheme.colorEdit),
-                      title: Text('Editar'),
-                      dense: true)),
-              PopupMenuItem(
-                  value: 'toggle',
-                  child: ListTile(
-                    leading: Icon(
-                        user.isActive ? Icons.block : Icons.check_circle,
-                        color: user.isActive
-                            ? AppTheme.muted
-                            : AppTheme.colorSuccess),
-                    title: Text(user.isActive ? 'Desactivar' : 'Activar'),
-                    dense: true,
-                  )),
-              const PopupMenuItem(
-                  value: 'delete',
-                  child: ListTile(
-                      leading: Icon(Icons.delete, color: AppTheme.destructive),
-                      title: Text('Eliminar'),
-                      dense: true)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // Botón Ver
+              IconButton(
+                icon: const Icon(Icons.visibility_outlined,
+                    color: AppTheme.primary),
+                onPressed: () => _viewUser(user),
+                tooltip: 'Ver detalles',
+              ),
+              // Botón Editar
+              IconButton(
+                icon:
+                    const Icon(Icons.edit_outlined, color: AppTheme.colorEdit),
+                onPressed: () => _editUser(user),
+                tooltip: 'Editar',
+              ),
+              // Botón Activar/Desactivar
+              IconButton(
+                icon: Icon(
+                  user.isActive ? Icons.block : Icons.check_circle,
+                  color: user.isActive ? AppTheme.muted : AppTheme.colorSuccess,
+                ),
+                onPressed: () => _toggleStatus(user),
+                tooltip: user.isActive ? 'Desactivar' : 'Activar',
+              ),
+              // Botón Eliminar
+              IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    color: AppTheme.destructive),
+                onPressed: () => _deleteUser(user.id),
+                tooltip: 'Eliminar',
+              ),
             ],
           ),
         ],
@@ -591,5 +650,3 @@ class _UserFormScreenState extends State<UserFormScreen> {
     );
   }
 }
-
-

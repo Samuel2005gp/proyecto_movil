@@ -232,123 +232,150 @@ class _ClientScreenState extends State<ClientScreen> {
               offset: const Offset(0, 3))
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppTheme.primary.withOpacity(0.2),
-            child: Text(
-              client.nombre.isNotEmpty && client.apellido.isNotEmpty
-                  ? client.nombre[0].toUpperCase() +
-                      client.apellido[0].toUpperCase()
-                  : client.nombre.isNotEmpty
-                      ? client.nombre[0].toUpperCase()
-                      : '?',
-              style: const TextStyle(
-                  color: AppTheme.primary, fontWeight: FontWeight.bold),
-            ),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.primary.withOpacity(0.2),
+                child: Text(
+                  client.nombre.isNotEmpty && client.apellido.isNotEmpty
+                      ? client.nombre[0].toUpperCase() +
+                          client.apellido[0].toUpperCase()
+                      : client.nombre.isNotEmpty
+                          ? client.nombre[0].toUpperCase()
+                          : '?',
+                  style: const TextStyle(
+                      color: AppTheme.primary, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(client.nombreCompleto,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(client.correo,
+                        style: const TextStyle(
+                            color: AppTheme.muted, fontSize: 13)),
+                    if (client.telefono.isNotEmpty)
+                      Text(client.telefono,
+                          style: const TextStyle(
+                              color: AppTheme.muted, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(client.nombreCompleto,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(client.correo,
-                    style:
-                        const TextStyle(color: AppTheme.muted, fontSize: 13)),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _showClientDetail(client),
-            child: const Icon(Icons.more_horiz, color: AppTheme.muted),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // Botón Ver
+              IconButton(
+                icon: const Icon(Icons.visibility_outlined,
+                    color: AppTheme.primary),
+                onPressed: () => _viewClient(client),
+                tooltip: 'Ver detalles',
+              ),
+              // Botón Editar
+              IconButton(
+                icon:
+                    const Icon(Icons.edit_outlined, color: AppTheme.colorEdit),
+                onPressed: () => _editClient(client),
+                tooltip: 'Editar',
+              ),
+              // Botón Eliminar
+              IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    color: AppTheme.destructive),
+                onPressed: () => _deleteClient(client.id),
+                tooltip: 'Eliminar',
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  void _showClientDetail(ClientModel client) {
-    showModalBottomSheet(
+  void _viewClient(ClientModel client) {
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(25),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 60,
-                height: 5,
-                decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(client.nombreCompleto,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
-            const SizedBox(height: 15),
-            _buildInfoTile(Icons.email, 'Email', client.correo),
-            _buildInfoTile(Icons.phone, 'Teléfono', client.telefono),
-            _buildInfoTile(Icons.check_circle, 'Estado', client.estado),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showError('Edición próximamente');
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Editar'),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.colorEdit),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _deleteClient(client.id);
-                    },
-                    icon: const Icon(Icons.delete),
-                    label: const Text('Eliminar'),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.destructive),
-                  ),
-                ),
-              ],
-            ),
-          ],
+      builder: (context) => AlertDialog(
+        title: const Text('Detalles del Cliente'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Nombre:', client.nombreCompleto),
+              _buildDetailRow('Email:', client.correo),
+              _buildDetailRow(
+                  'Teléfono:',
+                  client.telefono.isNotEmpty
+                      ? client.telefono
+                      : 'No registrado'),
+              _buildDetailRow('Estado:', client.estado),
+              if (client.tipoDocumento.isNotEmpty)
+                _buildDetailRow('Tipo Doc:', client.tipoDocumento),
+              if (client.numeroDocumento.isNotEmpty)
+                _buildDetailRow('Documento:', client.numeroDocumento),
+              if (client.direccion.isNotEmpty)
+                _buildDetailRow('Dirección:', client.direccion),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoTile(IconData icon, String title, String value) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-          color: AppTheme.background, borderRadius: BorderRadius.circular(12)),
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppTheme.primary),
-          const SizedBox(width: 10),
-          Text('$title: ',
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.muted,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editClient(ClientModel client) {
+    // Por ahora mostrar un mensaje, luego se puede implementar la edición completa
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar Cliente'),
+        content: const Text(
+            'Funcionalidad de edición en desarrollo.\n\nPróximamente podrás editar la información del cliente.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendido'),
+          ),
         ],
       ),
     );

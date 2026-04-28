@@ -377,9 +377,32 @@ class _SaleScreenState extends State<SaleScreen> {
               ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppTheme.destructive),
-            onPressed: () => _deleteSale(sale.id),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // Botón Ver
+              IconButton(
+                icon: const Icon(Icons.visibility_outlined,
+                    color: AppTheme.primary),
+                onPressed: () => _viewSale(sale),
+                tooltip: 'Ver detalles',
+              ),
+              // Botón Editar (solo si no está completada)
+              if (sale.estado.toLowerCase() != 'completada')
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined,
+                      color: AppTheme.colorEdit),
+                  onPressed: () => _editSale(sale),
+                  tooltip: 'Editar',
+                ),
+              // Botón Eliminar
+              IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    color: AppTheme.destructive),
+                onPressed: () => _deleteSale(sale.id),
+                tooltip: 'Eliminar',
+              ),
+            ],
           ),
         ],
       ),
@@ -408,5 +431,82 @@ class _SaleScreenState extends State<SaleScreen> {
       default:
         return AppTheme.muted;
     }
+  }
+
+  void _viewSale(SaleModel sale) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Detalles de la Venta'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Cliente:', sale.clienteNombre ?? 'Sin cliente'),
+              _buildDetailRow(
+                  'Servicio:', sale.servicioNombre ?? 'Sin servicio'),
+              _buildDetailRow('Fecha:', _formatDate(sale.createdAt)),
+              _buildDetailRow('Método de Pago:', sale.metodoPago),
+              _buildDetailRow(
+                  'Subtotal:', '\$${sale.subtotal.toStringAsFixed(0)}'),
+              if (sale.descuento > 0)
+                _buildDetailRow(
+                    'Descuento:', '\$${sale.descuento.toStringAsFixed(0)}'),
+              _buildDetailRow('Total:', '\$${sale.total.toStringAsFixed(0)}'),
+              _buildDetailRow('Estado:', sale.estado),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.muted,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editSale(SaleModel sale) {
+    // Por ahora mostrar un mensaje, luego se puede implementar la edición completa
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar Venta'),
+        content: const Text(
+            'Funcionalidad de edición en desarrollo.\n\nPróximamente podrás editar los detalles de la venta.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
   }
 }
