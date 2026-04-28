@@ -4,12 +4,10 @@
   final double total;
   final double subtotal;
   final double descuento;
-  final double subtotal;
-  final double descuento;
   final String metodoPago;
   final String estado;
   final DateTime fecha;
-
+  final DateTime? citaFecha;
   final String clienteNombre;
   final String servicioNombre;
   final List<Map<String, dynamic>> items;
@@ -18,16 +16,19 @@
     required this.id,
     this.citaId,
     required this.total,
+    required this.subtotal,
+    required this.descuento,
     required this.metodoPago,
     required this.estado,
     required this.fecha,
+    this.citaFecha,
     required this.clienteNombre,
     required this.servicioNombre,
     required this.items,
   });
 
   factory SaleModel.fromJson(Map<String, dynamic> json) {
-    DateTime parseFecha(dynamic v) {
+    DateTime parseDate(dynamic v) {
       if (v == null) return DateTime.now();
       try {
         return DateTime.parse(v.toString());
@@ -43,45 +44,45 @@
 
     return SaleModel(
       id: json['id'] ?? 0,
-      citaId: json['cita_id'] ?? json['citaId'] ?? json['appointmentId'] ?? 0,
+      citaId: json['cita_id'] ?? json['citaId'] ?? json['appointmentId'],
       total: (json['total'] ?? json['amount'] ?? 0).toDouble(),
+      subtotal:
+          (json['subtotal'] ?? json['total'] ?? json['amount'] ?? 0).toDouble(),
+      descuento: (json['descuento'] ?? json['discount'] ?? 0).toDouble(),
       metodoPago: (json['metodo_pago'] ??
               json['metodoPago'] ??
               json['paymentMethod'] ??
               '')
           .toString(),
       estado: (json['estado'] ?? json['status'] ?? 'Completada').toString(),
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'].toString())
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'].toString())
-          : DateTime.now(),
-      // Prueba múltiples nombres de campo para el cliente
+      fecha: parseDate(
+        json['created_at'] ?? json['fecha'] ?? json['date'],
+      ),
+      citaFecha: (json['cita_fecha'] ??
+                  json['citaFecha'] ??
+                  json['appointment_date']) !=
+              null
+          ? parseDate(json['cita_fecha'] ??
+              json['citaFecha'] ??
+              json['appointment_date'])
+          : null,
       clienteNombre: (json['cliente_nombre'] ??
               json['clienteNombre'] ??
               json['client_name'] ??
               json['clientName'] ??
               json['cliente'] ??
-              json['client'])
-          ?.toString(),
-      // Prueba múltiples nombres de campo para el servicio
+              json['client'] ??
+              'Sin cliente')
+          .toString(),
       servicioNombre: (json['servicio_nombre'] ??
               json['servicioNombre'] ??
               json['service_name'] ??
               json['serviceName'] ??
               json['servicio'] ??
-              json['service'])
-          ?.toString(),
-      citaFecha: (json['cita_fecha'] ??
-                  json['citaFecha'] ??
-                  json['appointment_date']) !=
-              null
-          ? DateTime.parse((json['cita_fecha'] ??
-                  json['citaFecha'] ??
-                  json['appointment_date'])
-              .toString())
-          : null,
+              json['service'] ??
+              'Sin servicio')
+          .toString(),
+      items: itemsList,
     );
   }
 
@@ -90,10 +91,11 @@
       'id': id,
       'cita_id': citaId,
       'total': total,
+      'subtotal': subtotal,
+      'descuento': descuento,
       'metodo_pago': metodoPago,
       'estado': estado,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'fecha': fecha.toIso8601String(),
     };
   }
 }

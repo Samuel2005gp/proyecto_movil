@@ -663,7 +663,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-<<<<<<< HEAD
                 color: statusColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -678,7 +677,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               ]),
             ),
           ]),
-
           if (appointment.empleadoNombre.isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(children: [
@@ -688,7 +686,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
             ]),
           ],
-
           if (appointment.notas != null && appointment.notas!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -702,8 +699,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       overflow: TextOverflow.ellipsis)),
             ]),
           ],
-
-          // Acciones
           if (appointment.estado == 'Pendiente' || _userRole == 'Admin') ...[
             const SizedBox(height: 10),
             const Divider(height: 1),
@@ -730,56 +725,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     () => _deleteAppointment(appointment)),
             ]),
           ],
-=======
-                  color: statusColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(appointment.estado,
-                  style: TextStyle(
-                      color: statusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold))),
-          const Spacer(),
-          // Botón Ver (ojo)
-          IconButton(
-            icon:
-                const Icon(Icons.visibility_outlined, color: AppTheme.primary),
-            onPressed: () => _viewAppointment(appointment),
-            tooltip: 'Ver detalles',
-          ),
-          // Botón Editar (lápiz) - solo si está pendiente
-          if (appointment.estado == 'Pendiente')
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, color: AppTheme.colorEdit),
-              onPressed: () => _editAppointment(appointment),
-              tooltip: 'Editar',
-            ),
-          // Botones de estado
-          if (appointment.estado == 'Pendiente') ...[
-            if (_userRole != 'Cliente') ...[
-              IconButton(
-                  icon: const Icon(Icons.check_circle,
-                      color: AppTheme.colorSuccess),
-                  onPressed: () => _changeStatus(appointment, 'Completada'),
-                  tooltip: 'Completar'),
-              IconButton(
-                  icon: const Icon(Icons.cancel, color: AppTheme.colorEdit),
-                  onPressed: () => _changeStatus(appointment, 'Cancelada'),
-                  tooltip: 'Cancelar'),
-            ],
-            if (_userRole == 'Cliente')
-              IconButton(
-                  icon: const Icon(Icons.cancel, color: AppTheme.colorEdit),
-                  onPressed: () => _changeStatus(appointment, 'Cancelada'),
-                  tooltip: 'Cancelar'),
-          ],
-          // Botón Eliminar - solo para Admin
-          if (_userRole == 'Admin')
-            IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: AppTheme.destructive),
-                onPressed: () => _deleteAppointment(appointment),
-                tooltip: 'Eliminar'),
->>>>>>> eadd4a94276ee614bd47795412b42c8cb838879d
         ]),
       ),
     );

@@ -297,11 +297,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nombreCtrl   = TextEditingController(text: widget.user.nombre);
+    _nombreCtrl = TextEditingController(text: widget.user.nombre);
     _apellidoCtrl = TextEditingController(text: widget.user.apellido);
     _telefonoCtrl = TextEditingController(text: widget.user.telefono);
     _documentCtrl = TextEditingController(text: widget.user.document);
-    _selectedDocType = widget.user.documentType.isNotEmpty ? widget.user.documentType : null;
+    _selectedDocType =
+        widget.user.documentType.isNotEmpty ? widget.user.documentType : null;
   }
 
   @override
@@ -326,40 +327,50 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ApiConstants.userDetail(widget.user.id),
           {
             'firstName': _nombreCtrl.text.trim(),
-            'lastName':  _apellidoCtrl.text.trim(),
-            'phone':     _telefonoCtrl.text.trim(),
-            'email':     widget.user.correo,
-            'role':      widget.user.rol,
+            'lastName': _apellidoCtrl.text.trim(),
+            'phone': _telefonoCtrl.text.trim(),
+            'email': widget.user.correo,
+            'role': widget.user.rol,
             if (_selectedDocType != null) 'documentType': _selectedDocType,
-            if (_documentCtrl.text.trim().isNotEmpty) 'document': _documentCtrl.text.trim(),
+            if (_documentCtrl.text.trim().isNotEmpty)
+              'document': _documentCtrl.text.trim(),
           },
         );
-      } else if (['Manicurista', 'Estilista', 'Barbero', 'Masajista', 'Cosmetologa'].contains(role)) {
+      } else if ([
+        'Manicurista',
+        'Estilista',
+        'Barbero',
+        'Masajista',
+        'Cosmetologa'
+      ].contains(role)) {
         response = await ApiService.put(
           ApiConstants.updateMiPerfilEmpleado,
           {
-            'nombre':   _nombreCtrl.text.trim(),
+            'nombre': _nombreCtrl.text.trim(),
             'apellido': _apellidoCtrl.text.trim(),
             'telefono': _telefonoCtrl.text.trim(),
             if (_selectedDocType != null) 'tipo_documento': _selectedDocType,
-            if (_documentCtrl.text.trim().isNotEmpty) 'numero_documento': _documentCtrl.text.trim(),
+            if (_documentCtrl.text.trim().isNotEmpty)
+              'numero_documento': _documentCtrl.text.trim(),
           },
         );
       } else {
         response = await ApiService.put(
           ApiConstants.updateClientePerfil(widget.user.id),
           {
-            'nombre':   _nombreCtrl.text.trim(),
+            'nombre': _nombreCtrl.text.trim(),
             'apellido': _apellidoCtrl.text.trim(),
             'telefono': _telefonoCtrl.text.trim(),
             if (_selectedDocType != null) 'tipo_documento': _selectedDocType,
-            if (_documentCtrl.text.trim().isNotEmpty) 'numero_documento': _documentCtrl.text.trim(),
+            if (_documentCtrl.text.trim().isNotEmpty)
+              'numero_documento': _documentCtrl.text.trim(),
           },
         );
       }
 
       if (response.statusCode == 200) {
-        await StorageService.saveUserName('${_nombreCtrl.text.trim()} ${_apellidoCtrl.text.trim()}'.trim());
+        await StorageService.saveUserName(
+            '${_nombreCtrl.text.trim()} ${_apellidoCtrl.text.trim()}'.trim());
         if (!mounted) return;
         SnackBarHelper.showSuccess(context, 'Perfil actualizado correctamente');
         Navigator.pop(context, true);
@@ -367,14 +378,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         String errorMsg = 'Error ${response.statusCode}';
         try {
           final error = jsonDecode(response.body);
-          errorMsg = error['error']?.toString() ?? error['message']?.toString() ?? errorMsg;
+          errorMsg = error['error']?.toString() ??
+              error['message']?.toString() ??
+              errorMsg;
         } catch (_) {}
         if (!mounted) return;
         SnackBarHelper.showError(context, errorMsg);
       }
     } catch (e) {
       if (!mounted) return;
-      SnackBarHelper.showError(context, e.toString().replaceAll('Exception: ', ''));
+      SnackBarHelper.showError(
+          context, e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -389,44 +403,63 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Form(
           key: _formKey,
           child: Column(children: [
-            Center(child: CircleAvatar(
+            Center(
+                child: CircleAvatar(
               radius: 40,
               backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
               child: Text(
-                widget.user.nombre.isNotEmpty ? widget.user.nombre[0].toUpperCase() : '?',
-                style: const TextStyle(fontSize: 32, color: AppTheme.primary, fontWeight: FontWeight.bold),
+                widget.user.nombre.isNotEmpty
+                    ? widget.user.nombre[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                    fontSize: 32,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.bold),
               ),
             )),
             const SizedBox(height: 28),
             TextFormField(
               controller: _nombreCtrl,
-              decoration: const InputDecoration(labelText: 'Nombre', prefixIcon: Icon(Icons.person_outline)),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Campo requerido' : null,
+              decoration: const InputDecoration(
+                  labelText: 'Nombre', prefixIcon: Icon(Icons.person_outline)),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _apellidoCtrl,
-              decoration: const InputDecoration(labelText: 'Apellido', prefixIcon: Icon(Icons.person_2_outlined)),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Campo requerido' : null,
+              decoration: const InputDecoration(
+                  labelText: 'Apellido',
+                  prefixIcon: Icon(Icons.person_2_outlined)),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _telefonoCtrl,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Teléfono', prefixIcon: Icon(Icons.phone_outlined)),
+              decoration: const InputDecoration(
+                  labelText: 'Teléfono',
+                  prefixIcon: Icon(Icons.phone_outlined)),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedDocType,
-              decoration: const InputDecoration(labelText: 'Tipo de documento', prefixIcon: Icon(Icons.badge_outlined)),
-              items: _docTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+              decoration: const InputDecoration(
+                  labelText: 'Tipo de documento',
+                  prefixIcon: Icon(Icons.badge_outlined)),
+              items: _docTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
               onChanged: (v) => setState(() => _selectedDocType = v),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _documentCtrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Número de documento', prefixIcon: Icon(Icons.numbers_outlined)),
+              decoration: const InputDecoration(
+                  labelText: 'Número de documento',
+                  prefixIcon: Icon(Icons.numbers_outlined)),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -456,164 +489,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _save,
                 child: _isSaving
-                    ? const SizedBox(height: 20, width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : const Text('Guardar Cambios'),
               ),
             ),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-    setState(() => _isSaving = true);
-
-    try {
-      final role = await StorageService.getRole();
-      http.Response response;
-
-      if (role == 'Admin') {
-        response = await ApiService.put(
-          ApiConstants.userDetail(widget.user.id),
-          {
-            'firstName': _nombreCtrl.text.trim(),
-            'lastName': _apellidoCtrl.text.trim(),
-            'phone': _telefonoCtrl.text.trim(),
-            'email': widget.user.correo,
-            'role': widget.user.rol,
-          },
-        );
-      } else if ([
-        'Manicurista',
-        'Estilista',
-        'Barbero',
-        'Masajista',
-        'Cosmetologa'
-      ].contains(role)) {
-        response = await ApiService.put(
-          ApiConstants.updateMiPerfilEmpleado,
-          {
-            'firstName': _nombreCtrl.text.trim(),
-            'lastName': _apellidoCtrl.text.trim(),
-            'phone': _telefonoCtrl.text.trim(),
-          },
-        );
-      } else {
-        response = await ApiService.put(
-          ApiConstants.updateClientePerfil(widget.user.id),
-          {
-            'nombre': _nombreCtrl.text.trim(),
-            'apellido': _apellidoCtrl.text.trim(),
-            'telefono': _telefonoCtrl.text.trim(),
-          },
-        );
-      }
-
-      if (response.statusCode == 200) {
-        await StorageService.saveUserName(
-            '${_nombreCtrl.text.trim()} ${_apellidoCtrl.text.trim()}'.trim());
-        if (!mounted) return;
-        SnackBarHelper.showSuccess(context, 'Perfil actualizado correctamente');
-        Navigator.pop(context, true);
-      } else {
-        String errorMsg = 'Error ${response.statusCode}';
-        try {
-          final error = jsonDecode(response.body);
-          errorMsg = error['message']?.toString() ??
-              error['error']?.toString() ??
-              errorMsg;
-        } catch (_) {
-          errorMsg = response.body.isNotEmpty ? response.body : errorMsg;
-        }
-        if (!mounted) return;
-        SnackBarHelper.showError(context, errorMsg);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: AppTheme.destructive,
-          duration: const Duration(seconds: 5)));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Editar Perfil')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(children: [
-            Center(
-                child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: AppTheme.primary.withOpacity(0.2),
-                    child: Text(
-                        widget.user.nombre.isNotEmpty
-                            ? widget.user.nombre[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                            fontSize: 32,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold)))),
-            const SizedBox(height: 28),
-            TextFormField(
-                controller: _nombreCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Nombre',
-                    prefixIcon: Icon(Icons.person_outline)),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Campo requerido' : null),
-            const SizedBox(height: 16),
-            TextFormField(
-                controller: _apellidoCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Apellido',
-                    prefixIcon: Icon(Icons.person_2_outlined)),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Campo requerido' : null),
-            const SizedBox(height: 16),
-            TextFormField(
-                controller: _telefonoCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                    labelText: 'Telefono',
-                    prefixIcon: Icon(Icons.phone_outlined))),
-            const SizedBox(height: 16),
-            TextFormField(
-                initialValue: widget.user.correo,
-                readOnly: true,
-                decoration: InputDecoration(
-                    labelText: 'Correo',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    filled: true,
-                    fillColor: AppTheme.border.withOpacity(0.3))),
-            const SizedBox(height: 16),
-            TextFormField(
-                initialValue: widget.user.rol,
-                readOnly: true,
-                decoration: InputDecoration(
-                    labelText: 'Rol',
-                    prefixIcon: const Icon(Icons.badge_outlined),
-                    filled: true,
-                    fillColor: AppTheme.border.withOpacity(0.3))),
-            const SizedBox(height: 32),
-            SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                    onPressed: _isSaving ? null : _save,
-                    child: _isSaving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : const Text('Guardar Cambios'))),
           ]),
         ),
       ),

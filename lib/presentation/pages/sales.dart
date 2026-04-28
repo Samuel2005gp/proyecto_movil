@@ -295,18 +295,16 @@ class _SaleScreenState extends State<SaleScreen> {
               Text('Desc: \$${sale.descuento.toStringAsFixed(0)}',
                   style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
             ],
-          ),
+          ]),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Botón Ver
               IconButton(
                 icon: const Icon(Icons.visibility_outlined,
                     color: AppTheme.primary),
                 onPressed: () => _viewSale(sale),
                 tooltip: 'Ver detalles',
               ),
-              // Botón Editar (solo si no está completada)
               if (sale.estado.toLowerCase() != 'completada')
                 IconButton(
                   icon: const Icon(Icons.edit_outlined,
@@ -314,7 +312,6 @@ class _SaleScreenState extends State<SaleScreen> {
                   onPressed: () => _editSale(sale),
                   tooltip: 'Editar',
                 ),
-              // Botón Eliminar
               IconButton(
                 icon: const Icon(Icons.delete_outline,
                     color: AppTheme.destructive),
@@ -323,15 +320,6 @@ class _SaleScreenState extends State<SaleScreen> {
               ),
             ],
           ),
-            const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.delete_outline,
-                  color: AppTheme.destructive, size: 20),
-              onPressed: () => _deleteSale(sale.id),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ]),
         ],
       ]),
     );
@@ -375,10 +363,9 @@ class _SaleScreenState extends State<SaleScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow('Cliente:', sale.clienteNombre ?? 'Sin cliente'),
-              _buildDetailRow(
-                  'Servicio:', sale.servicioNombre ?? 'Sin servicio'),
-              _buildDetailRow('Fecha:', _formatDate(sale.createdAt)),
+              _buildDetailRow('Cliente:', sale.clienteNombre),
+              _buildDetailRow('Servicio:', sale.servicioNombre),
+              _buildDetailRow('Fecha:', _formatDate(sale.fecha)),
               _buildDetailRow('Método de Pago:', sale.metodoPago),
               _buildDetailRow(
                   'Subtotal:', '\$${sale.subtotal.toStringAsFixed(0)}'),
@@ -416,16 +403,13 @@ class _SaleScreenState extends State<SaleScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
   }
 
   void _editSale(SaleModel sale) {
-    // Por ahora mostrar un mensaje, luego se puede implementar la edición completa
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -451,16 +435,13 @@ class CreateSaleScreen extends StatefulWidget {
 }
 
 class _CreateSaleScreenState extends State<CreateSaleScreen> {
-  // tipo: 'cita' o 'directo'
   String _tipo = 'cita';
   bool _isSaving = false;
   bool _isLoadingData = true;
 
-  // Para venta por cita
   List<Map<String, dynamic>> _citasDisponibles = [];
   Map<String, dynamic>? _citaSeleccionada;
 
-  // Para venta directa
   List<Map<String, dynamic>> _servicios = [];
   List<Map<String, dynamic>> _clientes = [];
   int? _clienteSeleccionado;
@@ -562,8 +543,9 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
       if (_tipo == 'cita') {
         body['citaId'] = _citaSeleccionada!['id'];
       } else {
-        if (_clienteSeleccionado != null)
+        if (_clienteSeleccionado != null) {
           body['clienteId'] = _clienteSeleccionado;
+        }
         body['servicios'] = _serviciosAgregados
             .map((s) => {
                   'id': s['id'],
@@ -602,7 +584,6 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tipo de venta
                     const Text('Tipo de venta *',
                         style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600)),
@@ -617,7 +598,6 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                               'directo', 'Venta directa', Icons.point_of_sale)),
                     ]),
                     const SizedBox(height: 20),
-
                     if (_tipo == 'cita') ...[
                       const Text('Cita *',
                           style: TextStyle(
@@ -668,7 +648,6 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                         ),
                       ],
                     ] else ...[
-                      // Cliente (opcional para venta directa)
                       const Text('Cliente (opcional)',
                           style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w600)),
@@ -689,8 +668,6 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                             setState(() => _clienteSeleccionado = v),
                       ),
                       const SizedBox(height: 20),
-
-                      // Servicios
                       const Text('Servicios *',
                           style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w600)),
@@ -761,10 +738,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                                 )),
                       ],
                     ],
-
                     const SizedBox(height: 20),
-
-                    // Descuento
                     const Text('Descuento (\$)',
                         style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600)),
@@ -778,8 +752,6 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                           setState(() => _descuento = double.tryParse(v) ?? 0),
                     ),
                     const SizedBox(height: 20),
-
-                    // Método de pago
                     const Text('Método de pago *',
                         style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600)),
@@ -799,8 +771,6 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                       onChanged: (v) => setState(() => _metodoPago = v),
                     ),
                     const SizedBox(height: 24),
-
-                    // Resumen
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -822,7 +792,6 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                       ]),
                     ),
                     const SizedBox(height: 32),
-
                     Row(children: [
                       Expanded(
                         child: OutlinedButton(
