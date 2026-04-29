@@ -211,28 +211,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   void _editAppointment(AppointmentModel appointment) {
-    // Por ahora mostrar un mensaje, luego se puede implementar la edición completa
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Cita'),
-        content: const Text(
-            'Funcionalidad de edición en desarrollo.\n\nPor ahora puedes cancelar la cita y crear una nueva.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _changeStatus(appointment, 'Cancelada');
-            },
-            child: const Text('Cancelar Cita'),
-          ),
-        ],
-      ),
-    );
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+          builder: (_) => EditAppointmentScreen(appointment: appointment)),
+    ).then((updated) {
+      if (updated == true) _loadAppointments();
+    });
   }
 
   void _showSuccess(String msg) => SnackBarHelper.showSuccess(context, msg);
@@ -260,11 +245,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'completada':
-        return const Color(0xFFD97706);
+        return const Color(0xFF1D4ED8); // azul
       case 'pendiente':
-        return const Color(0xFF1D4ED8);
+        return const Color(0xFFD97706); // amarillo
       case 'cancelada':
-        return const Color(0xFFDC2626);
+        return const Color(0xFFDC2626); // rojo
       default:
         return AppTheme.muted;
     }
@@ -273,11 +258,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Color _getStatusBgColor(String status) {
     switch (status.toLowerCase()) {
       case 'completada':
-        return const Color(0xFFFEF9C3);
+        return const Color(0xFFDBEAFE); // azul claro
       case 'pendiente':
-        return const Color(0xFFDBEAFE);
+        return const Color(0xFFFEF9C3); // amarillo claro
       case 'cancelada':
-        return const Color(0xFFFCE7F3);
+        return const Color(0xFFFCE7F3); // rojo claro
       default:
         return const Color(0xFFF3F4F6);
     }
@@ -334,25 +319,28 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadAppointments,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _buildHeader(dayAppointments.length),
-              const SizedBox(height: 20),
-              _buildCalendarCard(),
-              const SizedBox(height: 8),
-              _buildLegend(),
-              const SizedBox(height: 28),
-              _buildDayAppointments(dayAppointments),
-              const SizedBox(height: 80),
-            ]),
+      body: Column(
+        children: [
+          _buildHeader(dayAppointments.length),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadAppointments,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCalendarCard(),
+                      const SizedBox(height: 8),
+                      _buildLegend(),
+                      const SizedBox(height: 28),
+                      _buildDayAppointments(dayAppointments),
+                    ]),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -361,35 +349,52 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final isToday = _selectedDay!.year == DateTime.now().year &&
         _selectedDay!.month == DateTime.now().month &&
         _selectedDay!.day == DateTime.now().day;
-
-    return Row(children: [
-      Expanded(
+    final topPadding = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Row(children: [
+        Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Citas',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 2),
-        Text(
-          isToday
-              ? 'Hoy, ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}'
-              : DateFormat('dd/MM/yyyy').format(_selectedDay!),
-          style: const TextStyle(fontSize: 13, color: AppTheme.muted),
+            const Text('Citas',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
+            const SizedBox(height: 4),
+            Text(
+              isToday
+                  ? 'Hoy, ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}'
+                  : DateFormat('dd/MM/yyyy').format(_selectedDay!),
+              style: const TextStyle(fontSize: 13, color: Colors.white70),
+            ),
+          ]),
         ),
-      ])),
-      if (count > 0)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppTheme.primary,
-            borderRadius: BorderRadius.circular(20),
+        if (count > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$count ${count == 1 ? 'cita' : 'citas'}',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13),
+            ),
           ),
-          child: Text(
-            '$count ${count == 1 ? 'cita' : 'citas'}',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-        ),
-    ]);
+      ]),
+    );
   }
 
   Widget _buildCalendarCard() {
@@ -705,17 +710,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             const SizedBox(height: 6),
             Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               if (appointment.estado == 'Pendiente') ...[
-                if (_userRole != 'Cliente')
-                  _actionBtn(
-                      Icons.check_circle_outline,
-                      'Completar',
-                      AppTheme.colorSuccess,
-                      () => _changeStatus(appointment, 'Completada')),
-                _actionBtn(
-                    Icons.cancel_outlined,
-                    'Cancelar',
-                    AppTheme.colorEdit,
-                    () => _changeStatus(appointment, 'Cancelada')),
+                _actionBtn(Icons.remove_red_eye_outlined, 'Ver',
+                    AppTheme.primary, () => _viewAppointment(appointment)),
+                _actionBtn(Icons.edit_outlined, 'Editar', AppTheme.primary,
+                    () => _editAppointment(appointment)),
               ],
               if (_userRole == 'Admin')
                 _actionBtn(
@@ -741,6 +739,493 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
+    );
+  }
+}
+
+// ── EDITAR CITA ───────────────────────────────────────────────────────────────
+class EditAppointmentScreen extends StatefulWidget {
+  final AppointmentModel appointment;
+  const EditAppointmentScreen({super.key, required this.appointment});
+  @override
+  State<EditAppointmentScreen> createState() => _EditAppointmentScreenState();
+}
+
+class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  // Datos cargados
+  List<Map<String, dynamic>> _clientes = [];
+  List<Map<String, dynamic>> _servicios = [];
+  List<Map<String, dynamic>> _empleados = [];
+
+  // Selecciones
+  int? _clienteSeleccionado;
+  DateTime _fecha = DateTime.now();
+  String _hora = '08:00';
+  final TextEditingController _notasCtrl = TextEditingController();
+
+  // Servicios agregados: [{servicio, empleado_usuario, nombre, empleadoNombre}]
+  final List<Map<String, dynamic>> _serviciosAgregados = [];
+
+  // Para agregar nuevo servicio
+  int? _servicioTemp;
+  int? _empleadoTemp;
+
+  // Horas disponibles
+  final List<String> _horas = List.generate(
+    28,
+    (i) {
+      final h = 7 + i ~/ 2;
+      final m = (i % 2) * 30;
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+    },
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _initFromAppointment();
+    _loadData();
+  }
+
+  void _initFromAppointment() {
+    final a = widget.appointment;
+    _clienteSeleccionado = a.clienteId > 0 ? a.clienteId : null;
+    _notasCtrl.text = a.notas ?? '';
+    // Fecha
+    try {
+      _fecha = DateTime.parse(a.fecha);
+    } catch (_) {
+      _fecha = DateTime.now();
+    }
+    // Hora
+    _hora = a.horario.length >= 5 ? a.horario.substring(0, 5) : '08:00';
+    // Servicios existentes
+    for (final s in a.servicios) {
+      _serviciosAgregados.add({
+        'servicio': s.serviceId,
+        'empleado_usuario': s.employeeId,
+        'nombre': s.serviceName,
+        'empleadoNombre': s.employeeName,
+        'duracion': s.duration,
+      });
+    }
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        ApiService.get(ApiConstants.clients),
+        ApiService.get(ApiConstants.services),
+        ApiService.get(ApiConstants.employees),
+      ]);
+      if (results[0].statusCode == 200) {
+        final data = jsonDecode(results[0].body) as List;
+        _clientes = data
+            .map((c) => {
+                  'id': c['id'] ?? c['PK_id_cliente'],
+                  'name':
+                      '${c['nombre'] ?? c['firstName'] ?? ''} ${c['apellido'] ?? c['lastName'] ?? ''}'
+                          .trim(),
+                })
+            .toList();
+      }
+      if (results[1].statusCode == 200) {
+        final data = jsonDecode(results[1].body) as List;
+        _servicios = data
+            .map((s) => {
+                  'id': s['id'],
+                  'name': s['name'] ?? s['nombre'] ?? '',
+                  'duracion': s['duration'] ?? s['duracion'] ?? 60,
+                  'precio': (s['price'] ?? s['precio'] ?? 0).toDouble(),
+                })
+            .toList();
+      }
+      if (results[2].statusCode == 200) {
+        final data = jsonDecode(results[2].body) as List;
+        _empleados = data
+            .map((e) => {
+                  'id': int.tryParse(e['id']?.toString() ?? '0') ?? 0,
+                  'name': e['name'] ??
+                      '${e['nombre'] ?? ''} ${e['apellido'] ?? ''}'.trim(),
+                })
+            .toList();
+      }
+    } catch (_) {}
+    setState(() => _isLoading = false);
+  }
+
+  @override
+  void dispose() {
+    _notasCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fecha,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('es'),
+    );
+    if (picked != null) setState(() => _fecha = picked);
+  }
+
+  void _agregarServicio() {
+    if (_servicioTemp == null) {
+      SnackBarHelper.showError(context, 'Selecciona un servicio');
+      return;
+    }
+    final s = _servicios.firstWhere((x) => x['id'] == _servicioTemp);
+    final e = _empleadoTemp != null
+        ? _empleados.firstWhere((x) => x['id'] == _empleadoTemp,
+            orElse: () => {'id': 0, 'name': ''})
+        : null;
+    setState(() {
+      _serviciosAgregados.add({
+        'servicio': _servicioTemp,
+        'empleado_usuario': _empleadoTemp ?? 0,
+        'nombre': s['name'],
+        'empleadoNombre': e?['name'] ?? '',
+        'duracion': s['duracion'],
+      });
+      _servicioTemp = null;
+      _empleadoTemp = null;
+    });
+  }
+
+  int get _duracionTotal => _serviciosAgregados.fold(
+      0, (sum, s) => sum + ((s['duracion'] as int?) ?? 60));
+
+  String get _horaFin {
+    if (_serviciosAgregados.isEmpty) return _hora;
+    final parts = _hora.split(':');
+    final mins =
+        int.parse(parts[0]) * 60 + int.parse(parts[1]) + _duracionTotal;
+    return '${(mins ~/ 60).toString().padLeft(2, '0')}:${(mins % 60).toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _save() async {
+    if (_serviciosAgregados.isEmpty) {
+      SnackBarHelper.showError(context, 'Agrega al menos un servicio');
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      final body = {
+        'cliente': _clienteSeleccionado,
+        'fecha': DateFormat('yyyy-MM-dd').format(_fecha),
+        'hora': _hora,
+        'notas': _notasCtrl.text.trim(),
+        'servicios': _serviciosAgregados
+            .map((s) => {
+                  'servicio': s['servicio'],
+                  'empleado_usuario': s['empleado_usuario'],
+                  'precio': null,
+                })
+            .toList(),
+      };
+      final response = await ApiService.put(
+          ApiConstants.appointmentDetail(widget.appointment.id), body);
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        SnackBarHelper.showSuccess(context, 'Cita actualizada correctamente');
+        Navigator.pop(context, true);
+      } else {
+        String errorMsg = 'Error ${response.statusCode}';
+        try {
+          final err = jsonDecode(response.body);
+          errorMsg = err['error']?.toString() ?? errorMsg;
+        } catch (_) {}
+        if (!mounted) return;
+        SnackBarHelper.showError(context, errorMsg);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.showError(
+          context, e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Editar Cita')),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Cliente
+                  const Text('Cliente',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    value: _clienteSeleccionado,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                        hintText: 'Selecciona un cliente'),
+                    items: _clientes
+                        .map((c) => DropdownMenuItem<int>(
+                              value: c['id'] as int,
+                              child: Text(c['name'],
+                                  overflow: TextOverflow.ellipsis),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => _clienteSeleccionado = v),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Fecha y Hora
+                  Row(children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Fecha *',
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: _pickDate,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppTheme.inputBg,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppTheme.border),
+                              ),
+                              child: Row(children: [
+                                const Icon(Icons.calendar_today_outlined,
+                                    size: 18, color: AppTheme.muted),
+                                const SizedBox(width: 8),
+                                Text(DateFormat('dd/MM/yyyy').format(_fecha),
+                                    style: const TextStyle(fontSize: 14)),
+                              ]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Hora *',
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value:
+                                _horas.contains(_hora) ? _hora : _horas.first,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.access_time)),
+                            items: _horas
+                                .map((h) =>
+                                    DropdownMenuItem(value: h, child: Text(h)))
+                                .toList(),
+                            onChanged: (v) => setState(() => _hora = v!),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 20),
+
+                  // Sección servicios
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.card,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Agregar Servicios',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+
+                        // Servicio dropdown
+                        const Text('Servicio',
+                            style:
+                                TextStyle(fontSize: 13, color: AppTheme.muted)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<int>(
+                          value: _servicioTemp,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                              hintText: 'Selecciona servicio'),
+                          items: _servicios
+                              .map((s) => DropdownMenuItem<int>(
+                                    value: s['id'] as int,
+                                    child: Text(s['name'],
+                                        overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() => _servicioTemp = v),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Empleado dropdown
+                        const Text('Empleado',
+                            style:
+                                TextStyle(fontSize: 13, color: AppTheme.muted)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<int>(
+                          value: _empleadoTemp,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                              hintText: 'Selecciona empleado'),
+                          items: _empleados
+                              .map((e) => DropdownMenuItem<int>(
+                                    value: e['id'] as int,
+                                    child: Text(e['name'],
+                                        overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() => _empleadoTemp = v),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Botón agregar
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _agregarServicio,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Agregar Servicio'),
+                          ),
+                        ),
+
+                        // Lista de servicios agregados
+                        if (_serviciosAgregados.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Text('Servicios agregados:',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppTheme.muted)),
+                          const SizedBox(height: 6),
+                          ..._serviciosAgregados.asMap().entries.map((e) {
+                            final s = e.value;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.background,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppTheme.border),
+                              ),
+                              child: Row(children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(s['nombre'],
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600)),
+                                      if ((s['empleadoNombre'] as String)
+                                          .isNotEmpty)
+                                        Row(children: [
+                                          const Icon(Icons.person_outline,
+                                              size: 12, color: AppTheme.muted),
+                                          const SizedBox(width: 3),
+                                          Text(s['empleadoNombre'],
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppTheme.muted)),
+                                        ]),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close,
+                                      size: 16, color: AppTheme.destructive),
+                                  onPressed: () => setState(() =>
+                                      _serviciosAgregados.removeAt(e.key)),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ]),
+                            );
+                          }),
+
+                          // Resumen duración
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Duración total: $_duracionTotal min  •  Finaliza: $_horaFin',
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppTheme.primary),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Notas
+                  const Text('Notas (opcional)',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _notasCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                        hintText: 'Agrega notas sobre la cita...'),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Botones
+                  Row(children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancelar'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _save,
+                        child: _isSaving
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Text('Actualizar Cita'),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
     );
   }
 }

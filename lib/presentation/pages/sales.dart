@@ -66,43 +66,6 @@ class _SaleScreenState extends State<SaleScreen> {
     }
   }
 
-  Future<void> _deleteSale(int id) async {
-    final confirm = await _showConfirmDialog('¿Eliminar esta venta?');
-    if (!confirm) return;
-    try {
-      final response = await ApiService.delete(ApiConstants.saleDetail(id));
-      if (response.statusCode == 200) {
-        SnackBarHelper.showSuccess(context, 'Venta eliminada exitosamente');
-        _loadSales();
-      } else {
-        final err = jsonDecode(response.body);
-        SnackBarHelper.showError(
-            context, err['error']?.toString() ?? 'Error al eliminar');
-      }
-    } catch (e) {
-      SnackBarHelper.showError(context, e.toString());
-    }
-  }
-
-  Future<bool> _showConfirmDialog(String message) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar'),
-        content: Text(message),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Confirmar')),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -139,33 +102,50 @@ class _SaleScreenState extends State<SaleScreen> {
         backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadSales,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
-              _buildSummaryCards(),
-              const SizedBox(height: 20),
-              _buildSalesList(),
-              const SizedBox(height: 80),
-            ],
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadSales,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                children: [
+                  _buildSummaryCards(),
+                  const SizedBox(height: 20),
+                  _buildSalesList(),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Ventas',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 4),
-      Text('${_sales.length} transacciones',
-          style: const TextStyle(fontSize: 14, color: AppTheme.muted)),
-    ]);
+    final topPadding = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Ventas',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
+        const SizedBox(height: 4),
+        Text('${_sales.length} transacciones',
+            style: const TextStyle(fontSize: 13, color: Colors.white70)),
+      ]),
+    );
   }
 
   Widget _buildSummaryCards() {
@@ -300,23 +280,10 @@ class _SaleScreenState extends State<SaleScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               IconButton(
-                icon: const Icon(Icons.visibility_outlined,
+                icon: const Icon(Icons.remove_red_eye_outlined,
                     color: AppTheme.primary),
                 onPressed: () => _viewSale(sale),
                 tooltip: 'Ver detalles',
-              ),
-              if (sale.estado.toLowerCase() != 'completada')
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      color: AppTheme.colorEdit),
-                  onPressed: () => _editSale(sale),
-                  tooltip: 'Editar',
-                ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: AppTheme.destructive),
-                onPressed: () => _deleteSale(sale.id),
-                tooltip: 'Eliminar',
               ),
             ],
           ),
@@ -404,23 +371,6 @@ class _SaleScreenState extends State<SaleScreen> {
             ),
           ),
           Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-
-  void _editSale(SaleModel sale) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Venta'),
-        content: const Text(
-            'Funcionalidad de edición en desarrollo.\n\nPróximamente podrás editar los detalles de la venta.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
-          ),
         ],
       ),
     );

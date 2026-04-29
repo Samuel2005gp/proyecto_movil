@@ -12,8 +12,8 @@ import 'presentation/pages/Cliente_home.dart';
 import 'presentation/pages/appointments.dart';
 import 'presentation/pages/clients.dart';
 import 'presentation/pages/sales.dart';
+import 'presentation/pages/services.dart';
 import 'presentation/pages/profile.dart';
-import 'presentation/pages/users.dart';
 
 void main() {
   runApp(const MyApp());
@@ -108,9 +108,9 @@ class _MainNavigatorState extends State<MainNavigator> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     AppointmentsScreen(),
-    ClientScreen(),
     SaleScreen(),
-    UsersScreen(),
+    const ServicesScreen(),
+    ClientScreen(),
     const ProfileScreen(),
   ];
 
@@ -128,11 +128,11 @@ class _MainNavigatorState extends State<MainNavigator> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
           BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month), label: 'Citas'),
-          BottomNavigationBarItem(icon: Icon(Icons.groups), label: 'Clientes'),
           BottomNavigationBarItem(
               icon: Icon(Icons.attach_money), label: 'Ventas'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.manage_accounts), label: 'Usuarios'),
+              icon: Icon(Icons.spa_outlined), label: 'Servicios'),
+          BottomNavigationBarItem(icon: Icon(Icons.groups), label: 'Clientes'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
@@ -313,63 +313,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadDashboardData,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 20),
-                _buildPromoCard(),
-                const SizedBox(height: 20),
-                _buildStatsGrid(),
-                const SizedBox(height: 25),
-                const Text(
-                  "Accesos Rápidos",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.muted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _buildQuickActions(context),
-                const SizedBox(height: 25),
-                const Text(
-                  "Próximas Citas",
-                  style: TextStyle(
-                    fontSize: 17,
-                    color: AppTheme.foreground,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (_proximasCitas.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text(
-                        'No hay citas próximas',
-                        style: TextStyle(color: AppTheme.muted),
+      body: RefreshIndicator(
+        onRefresh: _loadDashboardData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    _buildPromoCard(),
+                    const SizedBox(height: 20),
+                    _buildStatsGrid(),
+                    const SizedBox(height: 25),
+                    const Text(
+                      "Accesos Rápidos",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.muted,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  )
-                else
-                  ..._proximasCitas.map((cita) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildAppointmentItem(
-                          cita['name']!,
-                          cita['service']!,
-                          cita['time']!,
+                    const SizedBox(height: 10),
+                    _buildQuickActions(context),
+                    const SizedBox(height: 25),
+                    const Text(
+                      "Próximas Citas",
+                      style: TextStyle(
+                        fontSize: 17,
+                        color: AppTheme.foreground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_proximasCitas.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Text(
+                            'No hay citas próximas',
+                            style: TextStyle(color: AppTheme.muted),
+                          ),
                         ),
-                      )),
-                const SizedBox(height: 60),
-              ],
-            ),
+                      )
+                    else
+                      ..._proximasCitas.map((cita) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildAppointmentItem(
+                              cita['name']!,
+                              cita['service']!,
+                              cita['time']!,
+                            ),
+                          )),
+                    const SizedBox(height: 60),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -402,82 +407,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ? _userRole
                 : 'Usuario';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: const BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.only(
-          bottomRight: Radius.circular(28),
-          bottomLeft: Radius.circular(28),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$greeting,',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w400,
-                  ),
+    return Builder(
+      builder: (context) {
+        final topPadding = MediaQuery.of(context).padding.top;
+        return Container(
+          padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 28),
+          decoration: const BoxDecoration(
+            color: AppTheme.primary,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$greeting,',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _userName.isNotEmpty ? _userName : 'Usuario',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        rolLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _userName.isNotEmpty ? _userName : 'Usuario',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.4), width: 1.5),
                 ),
-                const SizedBox(height: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                child: Center(
                   child: Text(
-                    rolLabel,
+                    initials,
                     style: const TextStyle(
-                      fontSize: 12,
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-              border:
-                  Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -590,9 +600,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildQuickBtn(context, Icons.calendar_month, "Citas", 1),
-        _buildQuickBtn(context, Icons.groups, "Clientes", 2),
-        _buildQuickBtn(context, Icons.attach_money, "Ventas", 3),
-        _buildQuickBtn(context, Icons.manage_accounts, "Usuarios", 4),
+        _buildQuickBtn(context, Icons.attach_money, "Ventas", 2),
+        _buildQuickBtn(context, Icons.spa_outlined, "Servicios", 3),
+        _buildQuickBtn(context, Icons.groups, "Clientes", 4),
       ],
     );
   }

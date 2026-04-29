@@ -381,17 +381,15 @@ class _UsersScreenState extends State<UsersScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Botón Ver
               IconButton(
-                icon: const Icon(Icons.visibility_outlined,
+                icon: const Icon(Icons.remove_red_eye_outlined,
                     color: AppTheme.primary),
                 onPressed: () => _viewUser(user),
                 tooltip: 'Ver detalles',
               ),
               // Botón Editar
               IconButton(
-                icon:
-                    const Icon(Icons.edit_outlined, color: AppTheme.colorEdit),
+                icon: const Icon(Icons.edit_outlined, color: AppTheme.primary),
                 onPressed: () => _editUser(user),
                 tooltip: 'Editar',
               ),
@@ -404,7 +402,6 @@ class _UsersScreenState extends State<UsersScreen> {
                 onPressed: () => _toggleStatus(user),
                 tooltip: user.isActive ? 'Desactivar' : 'Activar',
               ),
-              // Botón Eliminar
               IconButton(
                 icon: const Icon(Icons.delete_outline,
                     color: AppTheme.destructive),
