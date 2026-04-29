@@ -293,7 +293,8 @@ class _ClientScreenState extends State<ClientScreen> {
                 tooltip: 'Editar',
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: AppTheme.destructive),
+                icon: const Icon(Icons.delete_outline,
+                    color: AppTheme.destructive),
                 onPressed: () => _deleteClient(client.id),
                 tooltip: 'Eliminar',
               ),
@@ -366,19 +367,241 @@ class _ClientScreenState extends State<ClientScreen> {
   }
 
   void _editClient(ClientModel client) {
-    // Por ahora mostrar un mensaje, luego se puede implementar la edición completa
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Cliente'),
-        content: const Text(
-            'Funcionalidad de edición en desarrollo.\n\nPróximamente podrás editar la información del cliente.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => EditClientScreen(client: client)),
+    ).then((updated) {
+      if (updated == true) _loadClients();
+    });
+  }
+}
+
+// ── EDITAR CLIENTE ────────────────────────────────────────────────────────────
+class EditClientScreen extends StatefulWidget {
+  final ClientModel client;
+  const EditClientScreen({super.key, required this.client});
+  @override
+  State<EditClientScreen> createState() => _EditClientScreenState();
+}
+
+class _EditClientScreenState extends State<EditClientScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nombreCtrl;
+  late TextEditingController _apellidoCtrl;
+  late TextEditingController _telefonoCtrl;
+  late TextEditingController _correoCtrl;
+  late TextEditingController _documentoCtrl;
+  late TextEditingController _direccionCtrl;
+  String? _tipoDocumento;
+  bool _isSaving = false;
+
+  static const _tiposDoc = [
+    'CC',
+    'TI',
+    'CE',
+    'Pasaporte',
+    'NIT',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreCtrl = TextEditingController(text: widget.client.nombre);
+    _apellidoCtrl = TextEditingController(text: widget.client.apellido);
+    _telefonoCtrl = TextEditingController(text: widget.client.telefono);
+    _correoCtrl = TextEditingController(text: widget.client.correo);
+    _documentoCtrl = TextEditingController(text: widget.client.numeroDocumento);
+    _direccionCtrl = TextEditingController(text: widget.client.direccion);
+    _tipoDocumento = widget.client.tipoDocumento.isNotEmpty
+        ? widget.client.tipoDocumento
+        : null;
+  }
+
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    _apellidoCtrl.dispose();
+    _telefonoCtrl.dispose();
+    _correoCtrl.dispose();
+    _documentoCtrl.dispose();
+    _direccionCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isSaving = true);
+    try {
+      final response = await ApiService.put(
+        ApiConstants.clientDetail(widget.client.id),
+        {
+          'firstName': _nombreCtrl.text.trim(),
+          'lastName': _apellidoCtrl.text.trim(),
+          'phone': _telefonoCtrl.text.trim(),
+          'email': _correoCtrl.text.trim(),
+          'address': _direccionCtrl.text.trim(),
+          if (_tipoDocumento != null) 'documentType': _tipoDocumento,
+          if (_documentoCtrl.text.trim().isNotEmpty)
+            'document': _documentoCtrl.text.trim(),
+        },
+      );
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        SnackBarHelper.showSuccess(
+            context, 'Cliente actualizado correctamente');
+        Navigator.pop(context, true);
+      } else {
+        String errorMsg = 'Error ${response.statusCode}';
+        try {
+          final err = jsonDecode(response.body);
+          errorMsg = err['error']?.toString() ??
+              err['message']?.toString() ??
+              errorMsg;
+        } catch (_) {}
+        if (!mounted) return;
+        SnackBarHelper.showError(context, errorMsg);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.showError(
+          context, e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Editar Cliente')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar con iniciales
+              Center(
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                  child: Text(
+                    widget.client.nombre.isNotEmpty
+                        ? '${widget.client.nombre[0]}${widget.client.apellido.isNotEmpty ? widget.client.apellido[0] : ''}'
+                            .toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                        fontSize: 28,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Tipo y número de documento en fila
+              DropdownButtonFormField<String>(
+                value: _tipoDocumento,
+                decoration: const InputDecoration(
+                    labelText: 'Tipo de Documento',
+                    prefixIcon: Icon(Icons.badge_outlined)),
+                items: _tiposDoc
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+                onChanged: (v) => setState(() => _tipoDocumento = v),
+              ),
+              const SizedBox(height: 16),
+
+              TextFormField(
+                controller: _documentoCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Número de Documento',
+                    prefixIcon: Icon(Icons.numbers_outlined)),
+              ),
+              const SizedBox(height: 16),
+
+              // Nombre y apellido en fila
+              TextFormField(
+                controller: _nombreCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Nombre *',
+                    prefixIcon: Icon(Icons.person_outline)),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 16),
+
+              TextFormField(
+                controller: _apellidoCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Apellido *',
+                    prefixIcon: Icon(Icons.person_2_outlined)),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Teléfono y email en fila
+              TextFormField(
+                controller: _telefonoCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                    labelText: 'Teléfono *',
+                    prefixIcon: Icon(Icons.phone_outlined)),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 16),
+
+              TextFormField(
+                controller: _correoCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                    labelText: 'Email *',
+                    prefixIcon: Icon(Icons.email_outlined)),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Dirección
+              TextFormField(
+                controller: _direccionCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Dirección',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                    hintText: 'Calle 123 #45-67, Bogotá'),
+              ),
+              const SizedBox(height: 32),
+
+              // Botones
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _save,
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('Actualizar Cliente'),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 20),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

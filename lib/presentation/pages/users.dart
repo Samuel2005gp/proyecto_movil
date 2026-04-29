@@ -403,7 +403,8 @@ class _UsersScreenState extends State<UsersScreen> {
                 tooltip: user.isActive ? 'Desactivar' : 'Activar',
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: AppTheme.destructive),
+                icon: const Icon(Icons.delete_outline,
+                    color: AppTheme.destructive),
                 onPressed: () => _deleteUser(user.id),
                 tooltip: 'Eliminar',
               ),

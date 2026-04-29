@@ -278,7 +278,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
             tooltip: 'Editar',
           ),
           IconButton(
-            icon: const Icon(Icons.close, color: AppTheme.destructive),
+            icon: const Icon(Icons.delete_outline, color: AppTheme.destructive),
             onPressed: () => _deleteService(id),
             tooltip: 'Eliminar',
           ),

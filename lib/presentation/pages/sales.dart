@@ -66,43 +66,6 @@ class _SaleScreenState extends State<SaleScreen> {
     }
   }
 
-  Future<void> _deleteSale(int id) async {
-    final confirm = await _showConfirmDialog('¿Eliminar esta venta?');
-    if (!confirm) return;
-    try {
-      final response = await ApiService.delete(ApiConstants.saleDetail(id));
-      if (response.statusCode == 200) {
-        SnackBarHelper.showSuccess(context, 'Venta eliminada exitosamente');
-        _loadSales();
-      } else {
-        final err = jsonDecode(response.body);
-        SnackBarHelper.showError(
-            context, err['error']?.toString() ?? 'Error al eliminar');
-      }
-    } catch (e) {
-      SnackBarHelper.showError(context, e.toString());
-    }
-  }
-
-  Future<bool> _showConfirmDialog(String message) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar'),
-        content: Text(message),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Confirmar')),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -322,18 +285,6 @@ class _SaleScreenState extends State<SaleScreen> {
                 onPressed: () => _viewSale(sale),
                 tooltip: 'Ver detalles',
               ),
-              if (sale.estado.toLowerCase() != 'completada')
-                IconButton(
-                  icon:
-                      const Icon(Icons.edit_outlined, color: AppTheme.primary),
-                  onPressed: () => _editSale(sale),
-                  tooltip: 'Editar',
-                ),
-              IconButton(
-                icon: const Icon(Icons.close, color: AppTheme.destructive),
-                onPressed: () => _deleteSale(sale.id),
-                tooltip: 'Eliminar',
-              ),
             ],
           ),
         ],
@@ -420,23 +371,6 @@ class _SaleScreenState extends State<SaleScreen> {
             ),
           ),
           Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-
-  void _editSale(SaleModel sale) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Venta'),
-        content: const Text(
-            'Funcionalidad de edición en desarrollo.\n\nPróximamente podrás editar los detalles de la venta.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
-          ),
         ],
       ),
     );
