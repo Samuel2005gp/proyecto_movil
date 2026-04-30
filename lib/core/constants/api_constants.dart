@@ -53,7 +53,8 @@ class ApiConstants {
   static String userDetail(int id) => '/users/$id';
   static String userStatus(int id) => '/users/$id/status';
 
-  // Mi perfil (según rol)
+  // Uploads
+  static const String uploadImage = '/uploads/image';
   static const String miPerfilCliente = '/clients/mi-perfil';
   static const String miPerfilEmpleado = '/employees/mi-perfil';
   static const String updateMiPerfilEmpleado = '/employees/mi-perfil';

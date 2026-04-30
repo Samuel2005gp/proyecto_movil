@@ -159,6 +159,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _errorMessage;
   String _userName = '';
   String _userRole = '';
+  String? _userPhoto;
   int _citasHoy = 0;
   int _totalClientes = 0;
   double _ventasHoy = 0;
@@ -246,6 +247,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (nombre.isNotEmpty) {
           _userName = '$nombre $apellido'.trim();
           await StorageService.saveUserName(_userName);
+          // Extraer foto de perfil
+          _userPhoto = data['photo']?.toString() ??
+              data['foto_perfil']?.toString() ??
+              data['fotoPerfil']?.toString();
+          if (_userPhoto != null && _userPhoto!.isEmpty) _userPhoto = null;
           return;
         }
 
@@ -528,25 +534,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.4), width: 1.5),
-                ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+              CircleAvatar(
+                radius: 25,
+                backgroundColor: Colors.white.withOpacity(0.2),
+                backgroundImage: (_userPhoto != null && _userPhoto!.isNotEmpty)
+                    ? NetworkImage(_userPhoto!)
+                    : null,
+                child: (_userPhoto == null || _userPhoto!.isEmpty)
+                    ? Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      )
+                    : null,
               ),
             ],
           ),

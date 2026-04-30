@@ -2,6 +2,7 @@
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/constants/api_constants.dart';
@@ -191,6 +192,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildHeader() {
     final topPadding = MediaQuery.of(context).padding.top;
+    final foto = _user?.fotoPerfil;
+    final tienefoto = foto != null && foto.isNotEmpty;
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
@@ -202,14 +206,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       child: Row(children: [
-        CircleAvatar(
-            radius: 32,
-            backgroundColor: Colors.white24,
-            child: Text(_getInitials(),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold))),
+        // Avatar con foto o iniciales (sin botón de cámara — está en Editar Perfil)
+        Stack(
+          children: [
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: Colors.white24,
+              backgroundImage: tienefoto ? NetworkImage(foto) : null,
+              child: tienefoto
+                  ? null
+                  : Text(_getInitials(),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
         const SizedBox(width: 16),
         Expanded(
             child:
@@ -236,6 +249,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ])),
       ]),
     );
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppTheme.primary),
+              title: const Text('Tomar foto'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppTheme.primary),
+              title: const Text('Elegir de galería'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked =
+        await picker.pickImage(source: source, maxWidth: 800, imageQuality: 80);
+    if (picked == null) return;
+
+    try {
+      // Subir a Cloudinary via backend
+      final token = await StorageService.getToken();
+      final uri =
+          Uri.parse('${ApiConstants.baseUrl}${ApiConstants.uploadImage}');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath('image', picked.path));
+
+      final streamed = await request.send();
+      final body = await streamed.stream.bytesToString();
+
+      if (streamed.statusCode == 201) {
+        final data = jsonDecode(body);
+        final photoUrl = data['url'] as String;
+
+        // Actualizar perfil con la nueva URL
+        final role = await StorageService.getRole();
+        final userId = await StorageService.getUserId();
+
+        http.Response? updateResp;
+        if (role == 'Admin' && userId != null) {
+          updateResp = await ApiService.put(
+              ApiConstants.userDetail(userId), {'photo': photoUrl});
+        } else if ([
+          'Manicurista',
+          'Estilista',
+          'Barbero',
+          'Masajista',
+          'Cosmetologa'
+        ].contains(role)) {
+          updateResp = await ApiService.put(
+              ApiConstants.updateMiPerfilEmpleado, {'foto_perfil': photoUrl});
+        } else {
+          updateResp = await ApiService.put(
+              ApiConstants.updateClientePerfil(_user!.id), {'image': photoUrl});
+        }
+
+        if (updateResp.statusCode == 200) {
+          if (!mounted) return;
+          SnackBarHelper.showSuccess(context, 'Foto actualizada');
+          _loadUserProfile();
+        }
+      } else {
+        if (!mounted) return;
+        SnackBarHelper.showError(context, 'Error al subir la imagen');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.showError(
+          context, e.toString().replaceAll('Exception: ', ''));
+    }
   }
 
   Widget _buildOptionTile(
@@ -326,6 +432,97 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _documentCtrl.dispose();
     _correoCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppTheme.primary),
+              title: const Text('Tomar foto'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppTheme.primary),
+              title: const Text('Elegir de galería'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked =
+        await picker.pickImage(source: source, maxWidth: 800, imageQuality: 80);
+    if (picked == null) return;
+
+    try {
+      final token = await StorageService.getToken();
+      final uri =
+          Uri.parse('${ApiConstants.baseUrl}${ApiConstants.uploadImage}');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath('image', picked.path));
+
+      final streamed = await request.send();
+      final body = await streamed.stream.bytesToString();
+
+      if (streamed.statusCode == 201) {
+        final data = jsonDecode(body);
+        final photoUrl = data['url'] as String;
+
+        final role = await StorageService.getRole();
+        http.Response updateResp;
+
+        if (role == 'Admin') {
+          updateResp = await ApiService.put(
+              ApiConstants.userDetail(widget.user.id), {'photo': photoUrl});
+        } else if ([
+          'Manicurista',
+          'Estilista',
+          'Barbero',
+          'Masajista',
+          'Cosmetologa'
+        ].contains(role)) {
+          updateResp = await ApiService.put(
+              ApiConstants.updateMiPerfilEmpleado, {'foto_perfil': photoUrl});
+        } else {
+          updateResp = await ApiService.put(
+              ApiConstants.updateClientePerfil(widget.user.id),
+              {'image': photoUrl});
+        }
+
+        if (updateResp.statusCode == 200) {
+          if (!mounted) return;
+          SnackBarHelper.showSuccess(context, 'Foto actualizada');
+          setState(() {}); // Fuerza rebuild para mostrar nueva foto
+        }
+      } else {
+        if (!mounted) return;
+        SnackBarHelper.showError(context, 'Error al subir la imagen');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarHelper.showError(
+          context, e.toString().replaceAll('Exception: ', ''));
+    }
   }
 
   Future<void> _save() async {
@@ -419,19 +616,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           key: _formKey,
           child: Column(children: [
             Center(
-                child: CircleAvatar(
-              radius: 40,
-              backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
-              child: Text(
-                widget.user.nombre.isNotEmpty
-                    ? widget.user.nombre[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                    fontSize: 32,
-                    color: AppTheme.primary,
-                    fontWeight: FontWeight.bold),
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
+                    backgroundImage: (widget.user.fotoPerfil != null &&
+                            widget.user.fotoPerfil!.isNotEmpty)
+                        ? NetworkImage(widget.user.fotoPerfil!)
+                        : null,
+                    child: (widget.user.fotoPerfil == null ||
+                            widget.user.fotoPerfil!.isEmpty)
+                        ? Text(
+                            widget.user.nombre.isNotEmpty
+                                ? widget.user.nombre[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                                fontSize: 32,
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.bold),
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _pickAndUploadPhoto,
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt,
+                            size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            )),
+            ),
             const SizedBox(height: 28),
             TextFormField(
               controller: _nombreCtrl,
