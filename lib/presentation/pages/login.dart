@@ -10,6 +10,7 @@ import 'admin_home.dart';
 import 'Cliente_home.dart';
 import 'empleado_home.dart';
 import 'register.dart';
+import 'forgot_password.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -193,6 +194,26 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             )
                           : const Text('Iniciar Sesión'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Forgot Password
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
+                    ),
+                    child: Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
 

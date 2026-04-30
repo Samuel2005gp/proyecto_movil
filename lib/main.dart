@@ -596,43 +596,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildQuickBtn(context, Icons.calendar_month, "Citas", 1),
-        _buildQuickBtn(context, Icons.attach_money, "Ventas", 2),
-        _buildQuickBtn(context, Icons.spa_outlined, "Servicios", 3),
-        _buildQuickBtn(context, Icons.groups, "Clientes", 4),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _buildQuickBtn(context, Icons.calendar_month, "Citas", 1),
+              const SizedBox(width: 16),
+              _buildQuickBtn(context, Icons.attach_money, "Ventas", 2),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildQuickBtn(context, Icons.spa_outlined, "Servicios", 3),
+              const SizedBox(width: 16),
+              _buildQuickBtn(context, Icons.groups, "Clientes", 4),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildQuickBtn(
       BuildContext context, IconData icon, String label, int index) {
-    return GestureDetector(
-      onTap: () {
-        final nav = context.findAncestorStateOfType<_MainNavigatorState>();
-        nav?.setState(() => nav._index = index);
-      },
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.card,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3)),
-              ],
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          final nav = context.findAncestorStateOfType<_MainNavigatorState>();
+          nav?.setState(() => nav._index = index);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.primary.withValues(alpha: 0.1),
+              width: 1,
             ),
-            child: Icon(icon, size: 28, color: AppTheme.primary),
           ),
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 13)),
-        ],
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 20, color: AppTheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.foreground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -394,7 +394,11 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
 
   List<Map<String, dynamic>> _servicios = [];
   List<Map<String, dynamic>> _clientes = [];
+  List<Map<String, dynamic>> _clientesFiltrados = [];
   int? _clienteSeleccionado;
+  final _clienteController = TextEditingController();
+  bool _showClienteDropdown = false;
+
   final List<Map<String, dynamic>> _serviciosAgregados = [];
   int? _servicioSeleccionado;
   double _descuento = 0;
@@ -418,6 +422,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
   @override
   void dispose() {
     _descuentoCtrl.dispose();
+    _clienteController.dispose();
     super.dispose();
   }
 
@@ -453,6 +458,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                           .trim(),
                 })
             .toList();
+        _clientesFiltrados = List.from(_clientes);
       }
     } catch (_) {}
     setState(() => _isLoadingData = false);
@@ -495,6 +501,9 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
       } else {
         if (_clienteSeleccionado != null) {
           body['clienteId'] = _clienteSeleccionado;
+        } else if (_clienteController.text.isNotEmpty) {
+          // Cliente nuevo escrito manualmente
+          body['clienteNombre'] = _clienteController.text.trim();
         }
         body['servicios'] = _serviciosAgregados
             .map((s) => {
@@ -602,21 +611,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                           style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<int>(
-                        value: _clienteSeleccionado,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                            hintText: 'Selecciona un cliente'),
-                        items: _clientes
-                            .map((c) => DropdownMenuItem<int>(
-                                  value: c['id'] as int,
-                                  child: Text(c['name'],
-                                      overflow: TextOverflow.ellipsis),
-                                ))
-                            .toList(),
-                        onChanged: (v) =>
-                            setState(() => _clienteSeleccionado = v),
-                      ),
+                      _buildClientSearchField(),
                       const SizedBox(height: 20),
                       const Text('Servicios *',
                           style: TextStyle(
@@ -769,6 +764,138 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
     );
   }
 
+  Widget _buildClientSearchField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _clienteController,
+          decoration: InputDecoration(
+            hintText: 'Buscar cliente o escribir nombre...',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _clienteController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      setState(() {
+                        _clienteController.clear();
+                        _clienteSeleccionado = null;
+                        _showClienteDropdown = false;
+                        _clientesFiltrados = List.from(_clientes);
+                      });
+                    },
+                  )
+                : null,
+          ),
+          onChanged: (value) {
+            setState(() {
+              _showClienteDropdown = value.isNotEmpty;
+              if (value.isEmpty) {
+                _clientesFiltrados = List.from(_clientes);
+                _clienteSeleccionado = null;
+              } else {
+                _clientesFiltrados = _clientes
+                    .where((cliente) => cliente['name']
+                        .toString()
+                        .toLowerCase()
+                        .contains(value.toLowerCase()))
+                    .toList();
+              }
+            });
+          },
+          onTap: () {
+            setState(() {
+              _showClienteDropdown = true;
+              if (_clienteController.text.isEmpty) {
+                _clientesFiltrados = List.from(_clientes);
+              }
+            });
+          },
+        ),
+        if (_showClienteDropdown && _clientesFiltrados.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: AppTheme.card,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _clientesFiltrados.length,
+              itemBuilder: (context, index) {
+                final cliente = _clientesFiltrados[index];
+                final isSelected = _clienteSeleccionado == cliente['id'];
+                return ListTile(
+                  dense: true,
+                  title: Text(
+                    cliente['name'],
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color:
+                          isSelected ? AppTheme.primary : AppTheme.foreground,
+                    ),
+                  ),
+                  leading: Icon(
+                    isSelected ? Icons.check_circle : Icons.person_outline,
+                    color: isSelected ? AppTheme.primary : AppTheme.muted,
+                    size: 20,
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _clienteSeleccionado = cliente['id'];
+                      _clienteController.text = cliente['name'];
+                      _showClienteDropdown = false;
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+        if (_clienteController.text.isNotEmpty &&
+            _clienteSeleccionado == null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.colorEdit.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border:
+                  Border.all(color: AppTheme.colorEdit.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppTheme.colorEdit, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Se registrará como cliente nuevo: "${_clienteController.text}"',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.colorEdit,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildTipoBtn(String tipo, String label, IconData icon) {
     final selected = _tipo == tipo;
     return GestureDetector(
@@ -776,6 +903,9 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
         _tipo = tipo;
         _citaSeleccionada = null;
         _serviciosAgregados.clear();
+        _clienteSeleccionado = null;
+        _clienteController.clear();
+        _showClienteDropdown = false;
       }),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
