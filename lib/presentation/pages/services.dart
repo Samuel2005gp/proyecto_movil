@@ -351,8 +351,13 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               controller: _nameCtrl,
               decoration: const InputDecoration(
                   labelText: 'Nombre *', prefixIcon: Icon(Icons.spa_outlined)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'El nombre es obligatorio';
+                if (v.trim().length < 3) return 'Mínimo 3 caracteres';
+                if (v.trim().length > 100) return 'Máximo 100 caracteres';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -360,8 +365,15 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                   labelText: 'Precio *', prefixIcon: Icon(Icons.attach_money)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'El precio es obligatorio';
+                final price = double.tryParse(v.trim());
+                if (price == null) return 'Ingresa un número válido';
+                if (price < 1000) return 'El precio mínimo es \$1.000';
+                if (price > 10000000) return 'El precio máximo es \$10.000.000';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -370,6 +382,14 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               decoration: const InputDecoration(
                   labelText: 'Duración (min)',
                   prefixIcon: Icon(Icons.access_time)),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                final dur = int.tryParse(v.trim());
+                if (dur == null) return 'Ingresa un número entero';
+                if (dur < 5) return 'Mínimo 5 minutos';
+                if (dur > 600) return 'Máximo 600 minutos';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -482,8 +502,13 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
               controller: _nameCtrl,
               decoration: const InputDecoration(
                   labelText: 'Nombre *', prefixIcon: Icon(Icons.spa_outlined)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'El nombre es obligatorio';
+                if (v.trim().length < 3) return 'Mínimo 3 caracteres';
+                if (v.trim().length > 100) return 'Máximo 100 caracteres';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -491,8 +516,15 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                   labelText: 'Precio *', prefixIcon: Icon(Icons.attach_money)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'El precio es obligatorio';
+                final price = double.tryParse(v.trim());
+                if (price == null) return 'Ingresa un número válido';
+                if (price < 1000) return 'El precio mínimo es \$1.000';
+                if (price > 10000000) return 'El precio máximo es \$10.000.000';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -501,6 +533,14 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
               decoration: const InputDecoration(
                   labelText: 'Duración (min)',
                   prefixIcon: Icon(Icons.access_time)),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                final dur = int.tryParse(v.trim());
+                if (dur == null) return 'Ingresa un número entero';
+                if (dur < 5) return 'Mínimo 5 minutos';
+                if (dur > 600) return 'Máximo 600 minutos';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(

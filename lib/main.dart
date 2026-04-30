@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/storage_service.dart';
@@ -176,11 +177,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      // Cargar nombre y rol del usuario
-      final userName = await StorageService.getUserName();
       final role = await StorageService.getRole();
-      _userName = userName ?? 'Usuario';
+      final userId = await StorageService.getUserId();
       _userRole = role ?? '';
+
+      // Cargar nombre real desde la API según el rol
+      await _loadUserName(role, userId);
 
       // Cargar estadísticas en paralelo
       await Future.wait([
@@ -198,6 +200,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadUserName(String? role, int? userId) async {
+    try {
+      http.Response? response;
+      if (role == 'Admin' && userId != null) {
+        response = await ApiService.get(ApiConstants.userDetail(userId));
+      } else if ([
+        'Manicurista',
+        'Estilista',
+        'Barbero',
+        'Masajista',
+        'Cosmetologa'
+      ].contains(role)) {
+        response = await ApiService.get(ApiConstants.miPerfilEmpleado);
+      } else if (role == 'Cliente') {
+        response = await ApiService.get(ApiConstants.miPerfilCliente);
+      }
+
+      if (response != null && response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final firstName =
+            data['firstName']?.toString() ?? data['nombre']?.toString() ?? '';
+        final lastName =
+            data['lastName']?.toString() ?? data['apellido']?.toString() ?? '';
+        final fullName = data['name']?.toString() ?? '';
+        final email =
+            data['email']?.toString() ?? data['correo']?.toString() ?? '';
+
+        bool isEmail(String s) => s.contains('@');
+
+        String nombre = '';
+        String apellido = '';
+
+        if (firstName.isNotEmpty && !isEmail(firstName)) {
+          nombre = firstName;
+          apellido = lastName;
+        } else if (fullName.isNotEmpty && !isEmail(fullName)) {
+          final parts = fullName.trim().split(' ');
+          nombre = parts.first;
+          apellido = parts.length > 1 ? parts.skip(1).join(' ') : '';
+        }
+
+        if (nombre.isNotEmpty) {
+          _userName = '$nombre $apellido'.trim();
+          await StorageService.saveUserName(_userName);
+          return;
+        }
+
+        // Último recurso: parte antes del @ del correo
+        if (email.isNotEmpty) {
+          _userName = email.split('@').first;
+          await StorageService.saveUserName(_userName);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback al storage
+    final stored = await StorageService.getUserName();
+    _userName = (stored != null && stored.isNotEmpty) ? stored : 'Usuario';
   }
 
   Future<void> _loadAppointmentsToday() async {
@@ -253,7 +316,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadClientsCount() async {
     try {
-      final response = await ApiService.get(ApiConstants.clients);
+      // Usa /para-citas que no requiere permiso especial y devuelve todos los clientes activos
+      final response = await ApiService.get(ApiConstants.clientsParaCitas);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         _totalClientes = data.length;

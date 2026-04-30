@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -543,20 +544,36 @@ class _UserFormScreenState extends State<UserFormScreen> {
             // Nombre
             TextFormField(
               controller: _nombreCtrl,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(
+                    RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]')),
+              ],
               decoration: const InputDecoration(
                   labelText: 'Nombre', prefixIcon: Icon(Icons.person_outline)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Requerido' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'El nombre es obligatorio';
+                if (v.trim().length < 2) return 'Mínimo 2 caracteres';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             // Apellido
             TextFormField(
               controller: _apellidoCtrl,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(
+                    RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]')),
+              ],
               decoration: const InputDecoration(
                   labelText: 'Apellido',
                   prefixIcon: Icon(Icons.person_2_outlined)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Requerido' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'El apellido es obligatorio';
+                if (v.trim().length < 2) return 'Mínimo 2 caracteres';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             // Email — editable siempre
@@ -567,8 +584,10 @@ class _UserFormScreenState extends State<UserFormScreen> {
                   labelText: 'Correo electrónico',
                   prefixIcon: Icon(Icons.email_outlined)),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Requerido';
-                if (!v.contains('@')) return 'Correo inválido';
+                if (v == null || v.trim().isEmpty)
+                  return 'El correo es obligatorio';
+                if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v.trim()))
+                  return 'Correo inválido';
                 return null;
               },
             ),
@@ -577,9 +596,20 @@ class _UserFormScreenState extends State<UserFormScreen> {
             TextFormField(
               controller: _telefonoCtrl,
               keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d\+\-\s]')),
+                LengthLimitingTextInputFormatter(15),
+              ],
               decoration: const InputDecoration(
                   labelText: 'Teléfono',
                   prefixIcon: Icon(Icons.phone_outlined)),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                final digits = v.replaceAll(RegExp(r'\D'), '');
+                if (digits.length < 7) return 'Mínimo 7 dígitos';
+                if (digits.length > 15) return 'Máximo 15 dígitos';
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             // Tipo de documento
@@ -598,9 +628,20 @@ class _UserFormScreenState extends State<UserFormScreen> {
             TextFormField(
               controller: _documentCtrl,
               keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(20),
+              ],
               decoration: const InputDecoration(
                   labelText: 'Número de documento',
                   prefixIcon: Icon(Icons.numbers_outlined)),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                if (v.replaceAll(RegExp(r'\D'), '').length < 5) {
+                  return 'Mínimo 5 dígitos';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             // Rol
@@ -637,10 +678,12 @@ class _UserFormScreenState extends State<UserFormScreen> {
                   ),
                 ),
                 validator: (v) {
-                  if (!_isEditing && (v == null || v.isEmpty))
+                  if (!_isEditing && (v == null || v.isEmpty)) {
                     return 'Requerido';
-                  if (!_isEditing && v!.length < 6)
+                  }
+                  if (v != null && v.isNotEmpty && v.trim().length < 6) {
                     return 'Mínimo 6 caracteres';
+                  }
                   return null;
                 },
               ),

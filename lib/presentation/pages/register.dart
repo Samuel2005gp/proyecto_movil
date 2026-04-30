@@ -42,234 +42,243 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-
     try {
       final response = await ApiService.post(
         ApiConstants.clients,
         {
-          'nombre': _nombreCtrl.text.trim(),
-          'apellido': _apellidoCtrl.text.trim(),
-          'correo': _correoCtrl.text.trim(),
-          'telefono': _telefonoCtrl.text.trim(),
-          'tipoDocumento': _tipoDocSelected ?? '',
-          'documento': _numDocCtrl.text.trim(),
+          'firstName': _nombreCtrl.text.trim(),
+          'lastName': _apellidoCtrl.text.trim(),
+          'email': _correoCtrl.text.trim(),
+          'phone': _telefonoCtrl.text.trim(),
+          'documentType': _tipoDocSelected ?? '',
+          'document': _numDocCtrl.text.trim(),
           'contrasena': _passwordCtrl.text,
         },
       );
-
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (!mounted) return;
-        SnackBarHelper.showSuccess(context, 'Cuenta creada exitosamente. Inicia sesiÃ³n.');
+        SnackBarHelper.showSuccess(
+            context, 'Cuenta creada exitosamente. Inicia sesión.');
         Navigator.pop(context);
       } else {
         final error = jsonDecode(response.body);
-        _showError(error['message'] ?? 'Error al crear la cuenta');
+        _showError(
+            error['error'] ?? error['message'] ?? 'Error al crear la cuenta');
       }
     } catch (e) {
-      _showError('Error de conexiÃ³n: ${e.toString()}');
+      _showError('Error de conexión: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showError(String message) {
-    SnackBarHelper.showError(context, message);
-  }
+  void _showError(String message) => SnackBarHelper.showError(context, message);
 
-  // â”€â”€ Validadores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Validadores ──────────────────────────────────────────────────────────
 
   String? _validateNombre(String? v) {
     if (v == null || v.trim().isEmpty) return 'El nombre es requerido';
-    if (v.trim().length < 2) return 'MÃ­nimo 2 caracteres';
-    if (v.trim().length > 50) return 'MÃ¡ximo 50 caracteres';
-    if (!RegExp(r"^[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]+$").hasMatch(v.trim())) {
-      return 'Solo se permiten letras';
-    }
+    if (v.trim().length < 2) return 'Mínimo 2 caracteres';
+    if (v.trim().length > 50) return 'Máximo 50 caracteres';
     return null;
   }
 
   String? _validateApellido(String? v) {
     if (v == null || v.trim().isEmpty) return 'El apellido es requerido';
-    if (v.trim().length < 2) return 'MÃ­nimo 2 caracteres';
-    if (v.trim().length > 50) return 'MÃ¡ximo 50 caracteres';
-    if (!RegExp(r"^[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]+$").hasMatch(v.trim())) {
-      return 'Solo se permiten letras';
-    }
+    if (v.trim().length < 2) return 'Mínimo 2 caracteres';
+    if (v.trim().length > 50) return 'Máximo 50 caracteres';
     return null;
   }
 
   String? _validateCorreo(String? v) {
     if (v == null || v.trim().isEmpty) return 'El correo es requerido';
-    if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$').hasMatch(v.trim())) {
-      return 'Ingresa un correo vÃ¡lido (ej: usuario@correo.com)';
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v.trim())) {
+      return 'Ingresa un correo válido';
     }
     return null;
   }
 
   String? _validateTelefono(String? v) {
-    if (v == null || v.trim().isEmpty) return 'El telÃ©fono es requerido';
+    if (v == null || v.trim().isEmpty) return 'El teléfono es requerido';
     final digits = v.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 7) return 'MÃ­nimo 7 dÃ­gitos';
-    if (digits.length > 15) return 'MÃ¡ximo 15 dÃ­gitos';
+    if (digits.length < 7) return 'Mínimo 7 dígitos';
+    if (digits.length > 15) return 'Máximo 15 dígitos';
     return null;
   }
 
   String? _validateNumDoc(String? v) {
-    if (v == null || v.trim().isEmpty)
-      return 'El nÃºmero de documento es requerido';
-    if (!RegExp(r'^[a-zA-Z0-9\-]+$').hasMatch(v.trim())) {
-      return 'Solo letras, nÃºmeros y guiones';
+    if (v == null || v.trim().isEmpty) {
+      return 'El número de documento es requerido';
     }
-    if (v.trim().length < 4) return 'MÃ­nimo 4 caracteres';
-    if (v.trim().length > 20) return 'MÃ¡ximo 20 caracteres';
+    if (v.trim().length < 4) return 'Mínimo 4 caracteres';
+    if (v.trim().length > 20) return 'Máximo 20 caracteres';
     return null;
   }
 
   String? _validatePassword(String? v) {
-    if (v == null || v.isEmpty) return 'La contraseÃ±a es requerida';
-    if (v.length < 6) return 'MÃ­nimo 6 caracteres';
-    if (v.length > 50) return 'MÃ¡ximo 50 caracteres';
-    if (!RegExp(r'[A-Za-z]').hasMatch(v))
+    if (v == null || v.isEmpty) return 'La contraseña es requerida';
+    if (v.length < 6) return 'Mínimo 6 caracteres';
+    if (v.length > 50) return 'Máximo 50 caracteres';
+    if (!RegExp(r'[A-Za-z]').hasMatch(v)) {
       return 'Debe contener al menos una letra';
-    if (!RegExp(r'[0-9]').hasMatch(v))
-      return 'Debe contener al menos un nÃºmero';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(v)) {
+      return 'Debe contener al menos un número';
+    }
     return null;
   }
 
   String? _validateConfirm(String? v) {
-    if (v == null || v.isEmpty) return 'Confirma tu contraseÃ±a';
-    if (v != _passwordCtrl.text) return 'Las contraseÃ±as no coinciden';
+    if (v == null || v.isEmpty) return 'Confirma tu contraseña';
+    if (v != _passwordCtrl.text) return 'Las contraseñas no coinciden';
     return null;
+  }
+
+  // ── Estilo de inputs ─────────────────────────────────────────────────────
+
+  InputDecoration _inputDec(String hint, IconData icon, {Widget? suffix}) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, color: AppTheme.muted),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: const Color(0xFFF3F4F6),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.destructive),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.destructive, width: 1.5),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Container(
-              width: 350,
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: AppTheme.card,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 48),
+
+              // ── Ícono ────────────────────────────────────────────────
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.spa, size: 46, color: Colors.white),
               ),
-              child: Form(
+              const SizedBox(height: 28),
+
+              // ── Título ───────────────────────────────────────────────
+              Text(
+                'Crear Cuenta',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: AppTheme.foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Regístrate para agendar tus citas',
+                style: TextStyle(fontSize: 14, color: AppTheme.muted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              // ── Formulario ───────────────────────────────────────────
+              Form(
                 key: _formKey,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Ãcono
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.person_add_outlined,
-                          size: 48, color: AppTheme.primary),
-                    ),
-                    const SizedBox(height: 20),
-
-                    Text('Crear Cuenta',
-                        style: Theme.of(context).textTheme.displaySmall),
-                    const SizedBox(height: 6),
-                    Text(
-                      'RegÃ­strate para agendar tus citas',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: AppTheme.muted),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 28),
-
-                    // â”€â”€ Nombre â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Nombre
                     TextFormField(
                       controller: _nombreCtrl,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]')),
+                            RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]')),
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre *',
-                        prefixIcon: Icon(Icons.person_outline),
-                        hintText: 'Ej: MarÃ­a',
-                      ),
+                      decoration: _inputDec('Nombre *', Icons.person_outline),
                       validator: _validateNombre,
                     ),
                     const SizedBox(height: 14),
 
-                    // â”€â”€ Apellido â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Apellido
                     TextFormField(
                       controller: _apellidoCtrl,
                       textCapitalization: TextCapitalization.words,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'[a-zA-ZÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ±Ã‘\s]')),
+                            RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]')),
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'Apellido *',
-                        prefixIcon: Icon(Icons.person_2_outlined),
-                        hintText: 'Ej: GarcÃ­a',
-                      ),
+                      decoration:
+                          _inputDec('Apellido *', Icons.person_2_outlined),
                       validator: _validateApellido,
                     ),
                     const SizedBox(height: 14),
 
-                    // â”€â”€ Correo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Correo
                     TextFormField(
                       controller: _correoCtrl,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Correo electrÃ³nico *',
-                        prefixIcon: Icon(Icons.email_outlined),
-                        hintText: 'usuario@correo.com',
-                      ),
+                      decoration: _inputDec(
+                          'Correo electrónico *', Icons.email_outlined),
                       validator: _validateCorreo,
                     ),
                     const SizedBox(height: 14),
 
-                    // â”€â”€ TelÃ©fono â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Teléfono
                     TextFormField(
                       controller: _telefonoCtrl,
                       keyboardType: TextInputType.phone,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
                             RegExp(r'[\d\+\-\s]')),
+                        LengthLimitingTextInputFormatter(15),
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'TelÃ©fono *',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                        hintText: 'Ej: 3001234567',
-                      ),
+                      decoration: _inputDec('Teléfono *', Icons.phone_outlined),
                       validator: _validateTelefono,
                     ),
                     const SizedBox(height: 14),
 
-                    // â”€â”€ Tipo de documento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Tipo de documento
                     DropdownButtonFormField<String>(
-                      initialValue: _tipoDocSelected,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo de documento *',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
+                      value: _tipoDocSelected,
+                      decoration: _inputDec(
+                          'Tipo de documento *', Icons.badge_outlined),
                       items: const [
                         DropdownMenuItem(
-                            value: 'CC', child: Text('CÃ©dula de CiudadanÃ­a')),
+                            value: 'CC', child: Text('Cédula de Ciudadanía')),
                         DropdownMenuItem(
-                            value: 'CE', child: Text('CÃ©dula de ExtranjerÃ­a')),
+                            value: 'CE', child: Text('Cédula de Extranjería')),
                         DropdownMenuItem(
                             value: 'TI', child: Text('Tarjeta de Identidad')),
                         DropdownMenuItem(value: 'PA', child: Text('Pasaporte')),
@@ -282,42 +291,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // â”€â”€ NÃºmero de documento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Número de documento
                     TextFormField(
                       controller: _numDocCtrl,
                       keyboardType: TextInputType.text,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
                             RegExp(r'[a-zA-Z0-9\-]')),
+                        LengthLimitingTextInputFormatter(20),
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'NÃºmero de documento *',
-                        prefixIcon: Icon(Icons.numbers_outlined),
-                        hintText: 'Ej: 1234567890',
-                      ),
+                      decoration: _inputDec(
+                          'Número de documento *', Icons.numbers_outlined),
                       validator: _validateNumDoc,
                     ),
                     const SizedBox(height: 14),
 
-                    // â”€â”€ ContraseÃ±a â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Contraseña
                     TextFormField(
                       controller: _passwordCtrl,
                       obscureText: !_showPassword,
-                      decoration: InputDecoration(
-                        labelText: 'ContraseÃ±a *',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        hintText: 'MÃ­nimo 6 caracteres con letras y nÃºmeros',
-                        suffixIcon: IconButton(
-                          icon: Icon(_showPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility),
+                      decoration: _inputDec(
+                        'Contraseña * (mín. 6 chars con letras y números)',
+                        Icons.lock_outline,
+                        suffix: IconButton(
+                          icon: Icon(
+                            _showPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: AppTheme.muted,
+                          ),
                           onPressed: () =>
                               setState(() => _showPassword = !_showPassword),
                         ),
                       ),
                       validator: _validatePassword,
                       onChanged: (_) {
-                        // Revalida confirmar cuando cambia la contraseÃ±a
                         if (_confirmCtrl.text.isNotEmpty) {
                           _formKey.currentState?.validate();
                         }
@@ -325,85 +333,90 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // â”€â”€ Confirmar contraseÃ±a â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Confirmar contraseña
                     TextFormField(
                       controller: _confirmCtrl,
                       obscureText: !_showConfirm,
-                      decoration: InputDecoration(
-                        labelText: 'Confirmar contraseÃ±a *',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        hintText: 'Repite tu contraseÃ±a',
-                        suffixIcon: IconButton(
-                          icon: Icon(_showConfirm
-                              ? Icons.visibility_off
-                              : Icons.visibility),
+                      decoration: _inputDec(
+                        'Confirmar contraseña *',
+                        Icons.lock_outline,
+                        suffix: IconButton(
+                          icon: Icon(
+                            _showConfirm
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: AppTheme.muted,
+                          ),
                           onPressed: () =>
                               setState(() => _showConfirm = !_showConfirm),
                         ),
                       ),
                       validator: _validateConfirm,
                     ),
-
                     const SizedBox(height: 8),
-                    // Nota de campos obligatorios
+
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         '* Campos obligatorios',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.muted,
-                        ),
+                        style: TextStyle(fontSize: 11, color: AppTheme.muted),
                       ),
                     ),
+                    const SizedBox(height: 28),
 
-                    const SizedBox(height: 24),
-
-                    // â”€â”€ BotÃ³n registrar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Botón crear cuenta
                     SizedBox(
                       width: double.infinity,
+                      height: 52,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _register,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
                         child: _isLoading
                             ? const SizedBox(
-                                height: 20,
-                                width: 20,
+                                height: 22,
+                                width: 22,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
+                                    strokeWidth: 2, color: Colors.white),
                               )
-                            : const Text('Crear Cuenta'),
+                            : const Text('Crear Cuenta',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
                     ),
+                    const SizedBox(height: 20),
 
-                    const SizedBox(height: 16),
-
-                    // â”€â”€ Volver al login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // Volver al login
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Â¿Ya tienes cuenta? ',
-                          style: TextStyle(color: AppTheme.muted, fontSize: 14),
-                        ),
+                        const Text('¿Ya tienes cuenta? ',
+                            style:
+                                TextStyle(color: AppTheme.muted, fontSize: 14)),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Text(
-                            'Inicia sesiÃ³n',
+                            'Inicia sesión',
                             style: TextStyle(
                               color: AppTheme.primary,
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),

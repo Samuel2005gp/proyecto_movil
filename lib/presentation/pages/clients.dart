@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -516,30 +517,57 @@ class _EditClientScreenState extends State<EditClientScreen> {
               TextFormField(
                 controller: _documentoCtrl,
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(20),
+                ],
                 decoration: const InputDecoration(
                     labelText: 'Número de Documento',
                     prefixIcon: Icon(Icons.numbers_outlined)),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  if (v.replaceAll(RegExp(r'\D'), '').length < 5) {
+                    return 'Mínimo 5 dígitos';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
               // Nombre y apellido en fila
               TextFormField(
                 controller: _nombreCtrl,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]')),
+                ],
                 decoration: const InputDecoration(
                     labelText: 'Nombre *',
                     prefixIcon: Icon(Icons.person_outline)),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty)
+                    return 'El nombre es obligatorio';
+                  if (v.trim().length < 2) return 'Mínimo 2 caracteres';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
               TextFormField(
                 controller: _apellidoCtrl,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]')),
+                ],
                 decoration: const InputDecoration(
                     labelText: 'Apellido *',
                     prefixIcon: Icon(Icons.person_2_outlined)),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty)
+                    return 'El apellido es obligatorio';
+                  if (v.trim().length < 2) return 'Mínimo 2 caracteres';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -547,11 +575,22 @@ class _EditClientScreenState extends State<EditClientScreen> {
               TextFormField(
                 controller: _telefonoCtrl,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d\+\-\s]')),
+                  LengthLimitingTextInputFormatter(15),
+                ],
                 decoration: const InputDecoration(
                     labelText: 'Teléfono *',
                     prefixIcon: Icon(Icons.phone_outlined)),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'El teléfono es obligatorio';
+                  }
+                  final digits = v.replaceAll(RegExp(r'\D'), '');
+                  if (digits.length < 7) return 'Mínimo 7 dígitos';
+                  if (digits.length > 15) return 'Máximo 15 dígitos';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -561,8 +600,13 @@ class _EditClientScreenState extends State<EditClientScreen> {
                 decoration: const InputDecoration(
                     labelText: 'Email *',
                     prefixIcon: Icon(Icons.email_outlined)),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty)
+                    return 'El correo es obligatorio';
+                  if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v.trim()))
+                    return 'Correo inválido';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 

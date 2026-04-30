@@ -38,6 +38,7 @@ class ApiConstants {
 
   // Clients endpoints
   static const String clients = '/clients';
+  static const String clientsParaCitas = '/clients/para-citas';
   static String clientDetail(int id) => '/clients/$id';
   static String clientStatus(int id) => '/clients/$id/status';
 

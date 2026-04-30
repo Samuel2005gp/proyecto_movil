@@ -25,33 +25,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _sendResetEmail() async {
     final email = _emailController.text.trim();
-
     if (email.isEmpty) {
       _showError('Por favor ingresa tu correo electrónico');
       return;
     }
-
-    if (!_isValidEmail(email)) {
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
       _showError('Por favor ingresa un correo válido');
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
       final response = await ApiService.post(
         ApiConstants.forgotPassword,
         {'correo': email},
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        // Si estamos en desarrollo, el backend puede devolver el token
         final resetToken = data['resetToken'];
-
         if (resetToken != null) {
-          // En desarrollo, navegar directamente al reset
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
@@ -60,7 +51,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           );
         } else {
-          // En producción, mostrar mensaje de éxito
           _showSuccess(
               'Se ha enviado un correo con las instrucciones para restablecer tu contraseña');
           await Future.delayed(const Duration(seconds: 2));
@@ -78,108 +68,139 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-
   void _showError(String message) => SnackBarHelper.showError(context, message);
   void _showSuccess(String message) =>
       SnackBarHelper.showSuccess(context, message);
 
+  InputDecoration _inputDecoration(String hint, IconData icon) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, color: AppTheme.muted),
+      filled: true,
+      fillColor: const Color(0xFFF3F4F6),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.destructive),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppTheme.destructive, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recuperar Contraseña'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: Container(
-        color: AppTheme.primary,
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Container(
-              width: 350,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: AppTheme.card,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  )
-                ],
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 60),
+
+              // Ícono
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child:
+                    const Icon(Icons.lock_reset, size: 52, color: Colors.white),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+              const SizedBox(height: 40),
+
+              // Título
+              Text(
+                'Recuperar Contraseña',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: AppTheme.foreground,
+                      fontWeight: FontWeight.w700,
                     ),
-                    child: const Icon(Icons.lock_reset,
-                        size: 60, color: AppTheme.primary),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Recuperar Contraseña',
-                    style: Theme.of(context).textTheme.displaySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu contraseña',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.muted,
-                        ),
-                  ),
-                  const SizedBox(height: 32),
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      hintText: 'ejemplo@correo.com',
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _sendResetEmail,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Enviar Instrucciones'),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Volver al inicio de sesión',
-                      style: TextStyle(
-                        color: AppTheme.primary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 10),
+              Text(
+                'Ingresa tu correo y te enviaremos las instrucciones para restablecer tu contraseña',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: AppTheme.muted),
+              ),
+              const SizedBox(height: 40),
+
+              // Campo correo
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: _inputDecoration(
+                    'Correo electrónico', Icons.email_outlined),
+              ),
+              const SizedBox(height: 36),
+
+              // Botón
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _sendResetEmail,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Enviar Instrucciones',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Volver
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Text(
+                  'Volver al inicio de sesión',
+                  style: TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+            ],
           ),
         ),
       ),
