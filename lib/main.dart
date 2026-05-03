@@ -1,5 +1,6 @@
 ﻿import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:intl/intl.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/storage_service.dart';
@@ -102,8 +103,14 @@ class MainNavigator extends StatefulWidget {
   State<MainNavigator> createState() => _MainNavigatorState();
 }
 
-class _MainNavigatorState extends State<MainNavigator> {
+class _MainNavigatorState extends State<MainNavigator>
+    with SingleTickerProviderStateMixin {
   int _index = 0;
+  bool _goingRight = true;
+
+  // Controller unico con duracion fija — nunca se recrea
+  late final AnimationController _ctrl;
+  late final Animation<double> _progress;
 
   final List<Widget> _screens = [
     const DashboardScreen(),
@@ -115,26 +122,225 @@ class _MainNavigatorState extends State<MainNavigator> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Duracion fija — el spring se simula con la curva, no con SpringSimulation
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _progress = _ctrl;
+    // Empieza en 1.0 (pantalla ya visible)
+    _ctrl.value = 1.0;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onTabTapped(int newIndex) {
+    if (newIndex == _index) return;
+    setState(() {
+      _goingRight = newIndex > _index;
+      _index = newIndex;
+    });
+    // Reinicia desde 0 y anima hacia 1 con curva elasticOut (spring bounce)
+    _ctrl.forward(from: 0.0);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_index],
-      bottomNavigationBar: BottomNavigationBar(
+      body: AnimatedBuilder(
+        animation: _progress,
+        builder: (context, child) {
+          // Curva elasticOut da el efecto spring/bounce
+          final curved = Curves.elasticOut.transform(
+            _progress.value.clamp(0.0, 1.0),
+          );
+          // Slide: va de ±0.25 a 0.0
+          final dx = (_goingRight ? 1.0 - curved : curved - 1.0) * 0.25;
+          // Fade: de 0 a 1 en la primera mitad
+          final opacity = (_progress.value * 2.0).clamp(0.0, 1.0);
+
+          return Opacity(
+            opacity: opacity,
+            child: Transform.translate(
+              offset: Offset(MediaQuery.of(context).size.width * dx, 0),
+              child: child,
+            ),
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_index),
+          child: _screens[_index],
+        ),
+      ),
+      bottomNavigationBar: _AnimatedBottomNav(
         currentIndex: _index,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.primary,
-        unselectedItemColor: AppTheme.muted,
-        onTap: (i) => setState(() => _index = i),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month), label: 'Citas'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.attach_money), label: 'Ventas'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.spa_outlined), label: 'Servicios'),
-          BottomNavigationBarItem(icon: Icon(Icons.groups), label: 'Clientes'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+        onTap: _onTabTapped,
+      ),
+    );
+  }
+}
+
+// ── Bottom nav con indicador spring ───────────────────────────────────────
+class _AnimatedBottomNav extends StatefulWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _AnimatedBottomNav({
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  State<_AnimatedBottomNav> createState() => _AnimatedBottomNavState();
+}
+
+class _AnimatedBottomNavState extends State<_AnimatedBottomNav>
+    with TickerProviderStateMixin {
+
+  static const _labels = ['Inicio', 'Citas', 'Ventas', 'Servicios', 'Clientes', 'Perfil'];
+  static const _activeIcons = [
+    Icons.home_rounded, Icons.calendar_month, Icons.attach_money,
+    Icons.spa, Icons.groups, Icons.person,
+  ];
+  static const _inactiveIcons = [
+    Icons.home_outlined, Icons.calendar_month_outlined, Icons.money_outlined,
+    Icons.spa_outlined, Icons.groups_outlined, Icons.person_outline,
+  ];
+
+  // Un controller por tab para el bounce del icono
+  late List<AnimationController> _bounceControllers;
+  late List<Animation<double>> _scaleAnims;
+
+  @override
+  void initState() {
+    super.initState();
+    _bounceControllers = List.generate(_labels.length, (i) {
+      return AnimationController(vsync: this);
+    });
+    _scaleAnims = _bounceControllers.map((ctrl) {
+      return ctrl.drive(Tween<double>(begin: 1.0, end: 1.0));
+    }).toList();
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedBottomNav old) {
+    super.didUpdateWidget(old);
+    if (old.currentIndex != widget.currentIndex) {
+      _triggerBounce(widget.currentIndex);
+    }
+  }
+
+  void _triggerBounce(int i) {
+    final ctrl = _bounceControllers[i];
+    ctrl.dispose();
+    _bounceControllers[i] = AnimationController(vsync: this);
+
+    // Spring bounce en el icono seleccionado
+    final spring = SpringSimulation(
+      const SpringDescription(mass: 1.0, stiffness: 400.0, damping: 14.0),
+      1.3,   // empieza grande (overshoot)
+      1.0,   // vuelve a tamanio normal
+      -8.0,  // velocidad inicial negativa = rebote hacia abajo primero
+    );
+
+    _bounceControllers[i].animateWith(spring);
+
+    _scaleAnims[i] = _bounceControllers[i].drive(
+      Tween<double>(begin: 1.3, end: 1.0),
+    );
+
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (final c in _bounceControllers) { c.dispose(); }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.card,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
+          ),
         ],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            children: List.generate(_labels.length, (i) {
+              final selected = i == widget.currentIndex;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => widget.onTap(i),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Indicador superior en SizedBox fijo para no causar overflow
+                      SizedBox(
+                        height: 7,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOut,
+                            height: 3,
+                            width: selected ? 22.0 : 0.0,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Icono con spring bounce
+                      AnimatedBuilder(
+                        animation: _bounceControllers[i],
+                        builder: (_, __) {
+                          final scale = selected
+                              ? _scaleAnims[i].value
+                              : 1.0;
+                          return Transform.scale(
+                            scale: scale,
+                            child: Icon(
+                              selected ? _activeIcons[i] : _inactiveIcons[i],
+                              size: 22,
+                              color: selected ? AppTheme.primary : AppTheme.muted,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 2),
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                          color: selected ? AppTheme.primary : AppTheme.muted,
+                        ),
+                        child: Text(_labels[i]),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
