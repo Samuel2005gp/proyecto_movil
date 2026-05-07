@@ -3,15 +3,14 @@ import 'package:flutter/foundation.dart';
 
 class ApiConstants {
   // Configuración para diferentes plataformas
-  static String get baseUrl {
-    if (kIsWeb) {
-      // Para Flutter Web (Chrome, Firefox, etc.)
-      return 'http://localhost:3001';
-    } else {
-      // Para móvil - emulador Android
-      return 'http://10.0.2.2:3001';
-    }
+static String get baseUrl {
+  if (kIsWeb) {
+    return 'https://backend-highsoft-sena-production.up.railway.app';
+  } else {
+    // Para móvil (APK) también usa Railway
+    return 'https://backend-highsoft-sena-production.up.railway.app';
   }
+}
 
   // Auth endpoints
   static const String login = '/auth/login';
