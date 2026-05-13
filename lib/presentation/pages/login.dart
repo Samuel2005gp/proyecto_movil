@@ -54,7 +54,9 @@ class _LoginScreenState extends State<LoginScreen> {
         final token = data['token'];
 
         Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-        final role = decodedToken['rol'] ?? decodedToken['role'] ?? '';
+        final rawRole = decodedToken['rol'] ?? decodedToken['role'] ?? '';
+        // Normalizar el rol para que siempre sea consistente
+        final role = _normalizeRole(rawRole.toString());
         final userId = decodedToken['id'] ?? decodedToken['userId'] ?? 0;
         // Soporta 'nombre', 'name', 'firstName' según lo que devuelva el JWT
         final firstName = decodedToken['firstName']?.toString() ?? '';
@@ -83,20 +85,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _navigateToHome(String role) {
     Widget homeScreen;
-    if (role == 'Admin') {
+    final rolNorm = role.trim().toLowerCase();
+
+    if (rolNorm == 'admin' || rolNorm == 'administrador') {
       homeScreen = const AdminHomeScreen();
-    } else if (role == 'Cliente') {
+    } else if (rolNorm == 'cliente') {
       homeScreen = const ClienteHomeScreen();
     } else if ([
-      'Manicurista',
-      'Estilista',
-      'Barbero',
-      'Masajista',
-      'Cosmetóloga'
-    ].contains(role)) {
+      'manicurista',
+      'estilista',
+      'barbero',
+      'masajista',
+      'cosmetóloga',
+      'cosmetologa',
+      'empleado',
+    ].contains(rolNorm)) {
       homeScreen = const EmpleadoHomeScreen();
     } else {
-      _showError('Rol no reconocido');
+      _showError('Rol no reconocido: $role');
       return;
     }
     Navigator.of(context).pushReplacement(
@@ -105,6 +111,33 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showError(String message) => SnackBarHelper.showError(context, message);
+
+  /// Normaliza el nombre del rol para que siempre sea consistente
+  /// independientemente de cómo esté guardado en la BD
+  String _normalizeRole(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'admin':
+      case 'administrador':
+        return 'Admin';
+      case 'cliente':
+        return 'Cliente';
+      case 'manicurista':
+        return 'Manicurista';
+      case 'estilista':
+        return 'Estilista';
+      case 'barbero':
+        return 'Barbero';
+      case 'masajista':
+        return 'Masajista';
+      case 'cosmetóloga':
+      case 'cosmetologa':
+        return 'Cosmetologa';
+      case 'empleado':
+        return 'Manicurista'; // fallback genérico de empleado
+      default:
+        return raw; // devuelve tal cual si no se reconoce
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

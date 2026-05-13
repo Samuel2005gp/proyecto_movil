@@ -100,56 +100,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
   }
 
-  Future<void> _changeStatus(
-      AppointmentModel appointment, String newStatus) async {
-    if (appointment.estado == 'Completada') {
-      _showError('Esta cita ya está completada y no puede modificarse');
-      return;
-    }
-    if (appointment.estado == 'Cancelada') {
-      _showError('Esta cita ya está cancelada y no puede modificarse');
-      return;
-    }
-    if (appointment.estado == newStatus) {
-      _showError('La cita ya tiene el estado "$newStatus"');
-      return;
-    }
-    if (newStatus == 'Completada') {
-      final fechaHora =
-          DateTime.tryParse('${appointment.fecha} ${appointment.horario}');
-      if (fechaHora != null && fechaHora.isAfter(DateTime.now())) {
-        final confirm = await _showConfirmDialog(
-            'La cita es futura. ¿Deseas marcarla como completada de todas formas?');
-        if (!confirm) return;
-      }
-    }
-    final accion = newStatus == 'Completada' ? 'completar' : 'cancelar';
-    final confirm = await _showConfirmDialog('¿Deseas $accion esta cita?');
-    if (!confirm) return;
-    try {
-      final statusMap = {
-        'Completada': 'completed',
-        'Cancelada': 'cancelled',
-        'Pendiente': 'pending'
-      };
-      final statusEn = statusMap[newStatus] ?? newStatus.toLowerCase();
-      final response = await ApiService.patch(
-        ApiConstants.appointmentStatus(appointment.id),
-        {'status': statusEn},
-      );
-      if (response.statusCode == 200) {
-        _showSuccess('Cita marcada como $newStatus');
-        _loadAppointments();
-      } else {
-        final error = jsonDecode(response.body);
-        _showError(error['error']?.toString() ?? 'Error al cambiar estado');
-      }
-    } catch (e) {
-      _showError(
-          'Error de conexión: ${e.toString().replaceAll('Exception: ', '')}');
-    }
-  }
-
   void _viewAppointment(AppointmentModel appointment) {
     showDialog(
       context: context,
@@ -971,7 +921,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
                           TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int>(
-                    value: _clienteSeleccionado,
+                    initialValue: _clienteSeleccionado,
                     isExpanded: true,
                     decoration: const InputDecoration(
                         hintText: 'Selecciona un cliente'),
@@ -1028,7 +978,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
                                   fontSize: 14, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value:
+                            initialValue:
                                 _horas.contains(_hora) ? _hora : _horas.first,
                             isExpanded: true,
                             decoration: const InputDecoration(
@@ -1067,7 +1017,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
                                 TextStyle(fontSize: 13, color: AppTheme.muted)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<int>(
-                          value: _servicioTemp,
+                          initialValue: _servicioTemp,
                           isExpanded: true,
                           decoration: const InputDecoration(
                               hintText: 'Selecciona servicio'),
@@ -1088,7 +1038,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
                                 TextStyle(fontSize: 13, color: AppTheme.muted)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<int>(
-                          value: _empleadoTemp,
+                          initialValue: _empleadoTemp,
                           isExpanded: true,
                           decoration: const InputDecoration(
                               hintText: 'Selecciona empleado'),
