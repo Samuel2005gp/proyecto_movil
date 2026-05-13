@@ -256,6 +256,7 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ARCHIVO EDITADO - SI VES ESTO, EL ARCHIVO SE ESTÁ LEYENDO CORRECTAMENTE
     return Scaffold(
       appBar: AppBar(title: const Text('Nueva Cita')),
       body: _isLoadingData

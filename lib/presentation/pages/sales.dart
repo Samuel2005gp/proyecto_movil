@@ -488,6 +488,13 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
       return;
     }
 
+    // Validar que el descuento no sea mayor al subtotal
+    if (_descuento > _subtotal) {
+      SnackBarHelper.showError(context,
+          'El descuento no puede ser mayor al subtotal (\${_subtotal.toStringAsFixed(0)})');
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       final body = <String, dynamic>{
@@ -520,11 +527,13 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
         SnackBarHelper.showSuccess(context, 'Venta registrada exitosamente');
         Navigator.pop(context, true);
       } else {
+        if (!mounted) return;
         final err = jsonDecode(response.body);
         SnackBarHelper.showError(
             context, err['error']?.toString() ?? 'Error al registrar venta');
       }
     } catch (e) {
+      if (!mounted) return;
       SnackBarHelper.showError(context, e.toString());
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -563,7 +572,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                               fontSize: 14, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<Map<String, dynamic>>(
-                        value: _citaSeleccionada,
+                        initialValue: _citaSeleccionada,
                         isExpanded: true,
                         decoration: const InputDecoration(
                             hintText: 'Selecciona una cita'),
@@ -620,7 +629,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                       Row(children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: _servicioSeleccionado,
+                            initialValue: _servicioSeleccionado,
                             isExpanded: true,
                             decoration: const InputDecoration(
                                 hintText: 'Selecciona servicio'),
@@ -684,17 +693,27 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                       ],
                     ],
                     const SizedBox(height: 20),
-                    const Text('Descuento (\$)',
+                    const Text('Descuento (\$ pesos colombianos)',
                         style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _descuentoCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.discount_outlined)),
-                      onChanged: (v) =>
-                          setState(() => _descuento = double.tryParse(v) ?? 0),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.discount_outlined),
+                        hintText: 'Ingresa el descuento en pesos',
+                        helperText: _subtotal > 0
+                            ? 'Subtotal disponible: \$${_subtotal.toStringAsFixed(0)}'
+                            : null,
+                        errorText: _descuento > _subtotal
+                            ? 'No puede ser mayor al subtotal (\$${_subtotal.toStringAsFixed(0)})'
+                            : null,
+                      ),
+                      onChanged: (v) {
+                        final value = double.tryParse(v) ?? 0;
+                        setState(() => _descuento = value);
+                      },
                     ),
                     const SizedBox(height: 20),
                     const Text('Método de pago *',
@@ -702,7 +721,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                             fontSize: 14, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _metodoPago,
+                      initialValue: _metodoPago,
                       isExpanded: true,
                       decoration: const InputDecoration(
                           hintText: 'Selecciona método de pago'),

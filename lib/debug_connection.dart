@@ -8,7 +8,7 @@ void main() async {
 
   // URLs a probar
   final urls = [
-    'http://localhost:3001',
+    'https://backend-highsoft-sena-production.up.railway.app',
     'http://10.0.2.2:3001',
     'http://192.168.20.207:3001',
     'http://127.0.0.1:3001',
@@ -56,7 +56,7 @@ void main() async {
   print('\n' + '=' * 50);
   print('🔧 Recomendaciones:');
   print('- Si ninguna URL funciona, verifica que el backend esté corriendo');
-  print('- Si solo localhost funciona, hay problema de red con el emulador');
-  print('- Si 10.0.2.2 funciona, usar esa para emulador');
+  print('- Si solo Railway funciona, usar esa URL de producción');
+  print('- Si 10.0.2.2 funciona, usar esa para emulador local');
   print('- Si 192.168.20.207 funciona, usar esa para dispositivo físico');
 }

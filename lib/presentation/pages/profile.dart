@@ -368,8 +368,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           },
         );
       } else {
-        response = await ApiService.put(
-          ApiConstants.updateClientePerfil(widget.user.id),
+        response = await ApiService.patch(
+          ApiConstants.miPerfilCliente,
           {
             'firstName': _nombreCtrl.text.trim(),
             'lastName': _apellidoCtrl.text.trim(),

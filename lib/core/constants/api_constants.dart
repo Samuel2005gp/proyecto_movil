@@ -6,10 +6,10 @@ class ApiConstants {
   static String get baseUrl {
     if (kIsWeb) {
       // Para Flutter Web (Chrome, Firefox, etc.)
-      return 'http://localhost:3001';
+      return 'https://backend-highsoft-sena-production.up.railway.app';
     } else {
-      // Para móvil - emulador Android
-      return 'http://10.0.2.2:3001';
+      // Para móvil - usar la misma URL de producción
+      return 'https://backend-highsoft-sena-production.up.railway.app';
     }
   }
 
