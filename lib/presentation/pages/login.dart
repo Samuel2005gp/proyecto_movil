@@ -116,8 +116,12 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String message) => SnackBarHelper.showError(context, message);
 
   Future<void> _offerBiometricSetup(String email, String password, String role) async {
+    print('🔐 _offerBiometricSetup iniciado');
+    
     // Verificar si ya está habilitado
     final alreadyEnabled = await StorageService.isBiometricEnabled();
+    print('🔐 Biometría ya habilitada: $alreadyEnabled');
+    
     if (alreadyEnabled) {
       _navigateToHome(role);
       return;
@@ -125,6 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Verificar si el dispositivo soporta biometría
     final isAvailable = await BiometricService.isBiometricAvailable();
+    print('🔐 Biometría disponible en dispositivo: $isAvailable');
+    
     if (!isAvailable) {
       _navigateToHome(role);
       return;
@@ -132,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Obtener el tipo de biometría disponible
     final biometricType = await BiometricService.getBiometricTypeMessage();
+    print('🔐 Tipo de biometría: $biometricType');
 
     if (!mounted) return;
 
@@ -164,10 +171,18 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
 
+    print('🔐 Usuario eligió habilitar: $shouldEnable');
+
     if (shouldEnable == true) {
       // Guardar credenciales y habilitar biometría
+      print('🔐 Guardando credenciales: $email');
       await StorageService.saveBiometricCredentials(email, password);
       await StorageService.setBiometricEnabled(true);
+      
+      // Verificar que se guardaron correctamente
+      final savedEmail = await StorageService.getBiometricEmail();
+      final savedPassword = await StorageService.getBiometricPassword();
+      print('🔐 Credenciales guardadas - Email: ${savedEmail != null ? "✅" : "❌"}, Password: ${savedPassword != null ? "✅" : "❌"}');
       
       if (!mounted) return;
       SnackBarHelper.showSuccess(

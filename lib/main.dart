@@ -53,25 +53,39 @@ class _AuthCheckerState extends State<AuthChecker> {
   }
 
   Future<void> _checkAuth() async {
-    final hasSession = await StorageService.hasActiveSession();
+    print('🔐 _checkAuth iniciado');
+    
+    final biometricEnabled = await StorageService.isBiometricEnabled();
+    final biometricAvailable = await BiometricService.isBiometricAvailable();
+    
+    print('🔐 Biometría habilitada: $biometricEnabled');
+    print('🔐 Biometría disponible: $biometricAvailable');
 
     if (!mounted) return;
 
-    if (hasSession) {
-      final role = await StorageService.getRole();
-      _navigateToHome(role);
+    // Si la biometría está habilitada y disponible, SIEMPRE mostrar la opción
+    if (biometricEnabled && biometricAvailable) {
+      print('🔐 Mostrando diálogo de biometría');
+      setState(() {
+        _showBiometricOption = true;
+      });
+      // Mostrar opción de login biométrico
+      await _showBiometricLogin();
     } else {
-      // Verificar si la biometría está habilitada y disponible
-      final biometricEnabled = await StorageService.isBiometricEnabled();
-      final biometricAvailable = await BiometricService.isBiometricAvailable();
+      // Si NO hay biometría, verificar si hay sesión
+      final hasSession = await StorageService.hasActiveSession();
+      print('🔐 Tiene sesión activa (sin biometría): $hasSession');
       
-      if (biometricEnabled && biometricAvailable) {
-        setState(() {
-          _showBiometricOption = true;
-        });
-        // Mostrar opción de login biométrico
-        _showBiometricLogin();
+      if (hasSession) {
+        // Hay sesión pero no hay biometría, ir directo al home
+        print('🔐 Sesión activa sin biometría, navegando al home');
+        final role = await StorageService.getRole();
+        if (!mounted) return;
+        _navigateToHome(role);
       } else {
+        // No hay sesión ni biometría, mostrar login
+        print('🔐 Sin sesión, mostrando login');
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
@@ -179,35 +193,127 @@ class _AuthCheckerState extends State<AuthChecker> {
 
   Future<void> _authenticateWithBiometric() async {
     try {
+      print('🔐 Iniciando autenticación biométrica...');
+      
+      // Mostrar un indicador de carga
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(color: AppTheme.primary),
+          ),
+        );
+      }
+      
       final authenticated = await BiometricService.authenticate(
         localizedReason: 'Autentícate para acceder a la aplicación',
       );
+
+      print('🔐 Resultado de autenticación: $authenticated');
+
+      // Cerrar el indicador de carga
+      if (mounted) Navigator.of(context).pop();
 
       if (!mounted) return;
 
       if (authenticated) {
         // Obtener credenciales guardadas
+        print('🔐 Obteniendo credenciales guardadas...');
         final email = await StorageService.getBiometricEmail();
         final password = await StorageService.getBiometricPassword();
 
+        print('🔐 Email guardado: ${email != null ? "✅ Sí ($email)" : "❌ No"}');
+        print('🔐 Password guardado: ${password != null ? "✅ Sí" : "❌ No"}');
+
         if (email != null && password != null) {
           // Intentar login con las credenciales guardadas
+          print('🔐 Intentando login con credenciales guardadas...');
           await _loginWithCredentials(email, password);
         } else {
-          _showError('No se encontraron credenciales guardadas');
+          print('❌ No se encontraron credenciales guardadas');
+          if (!mounted) return;
+          
+          // Mostrar mensaje más descriptivo
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: AppTheme.destructive),
+                  SizedBox(width: 12),
+                  Text('Error'),
+                ],
+              ),
+              content: const Text(
+                'No se encontraron credenciales guardadas.\n\n'
+                'Por favor, inicia sesión manualmente y vuelve a habilitar la biometría desde tu perfil.',
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Entendido'),
+                ),
+              ],
+            ),
+          );
+          
+          if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
         }
       } else {
+        print('❌ Autenticación biométrica cancelada o fallida');
         // Autenticación fallida o cancelada
+        if (!mounted) return;
+        
+        // Mostrar mensaje
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Autenticación cancelada'),
+            backgroundColor: AppTheme.muted,
+          ),
+        );
+        
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
       }
     } catch (e) {
+      print('❌ Error en autenticación biométrica: $e');
+      
+      // Cerrar el indicador de carga si está abierto
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      
       if (!mounted) return;
-      _showError('Error en la autenticación biométrica');
+      
+      // Mostrar error detallado
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: AppTheme.destructive),
+              SizedBox(width: 12),
+              Text('Error'),
+            ],
+          ),
+          content: Text(
+            'Error en la autenticación biométrica:\n\n${e.toString()}',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
@@ -216,35 +322,63 @@ class _AuthCheckerState extends State<AuthChecker> {
 
   Future<void> _loginWithCredentials(String email, String password) async {
     try {
+      print('🔐 Intentando login con: $email');
+      
       final response = await ApiService.post(
         ApiConstants.login,
         {'correo': email, 'contrasena': password},
       );
 
+      print('🔐 Respuesta del servidor: ${response.statusCode}');
+      print('🔐 Body de respuesta: ${response.body}');
+
       if (!mounted) return;
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final token = data['token'];
-        final role = data['rol'];
-        final userId = data['id'];
-        final userName = data['nombre'] ?? 'Usuario';
+        
+        // Extraer datos con manejo de nulos
+        final token = data['token'] as String?;
+        final role = (data['rol'] ?? data['role'] ?? 'Usuario') as String;
+        final userId = (data['id'] ?? data['userId'] ?? 0) as int;
+        final userName = (data['nombre'] ?? data['name'] ?? 'Usuario') as String;
+
+        print('✅ Login exitoso');
+        print('   - Token: ${token != null ? "✅" : "❌"}');
+        print('   - Rol: $role');
+        print('   - UserId: $userId');
+        print('   - UserName: $userName');
+
+        if (token == null || token.isEmpty) {
+          print('❌ Token es null o vacío');
+          if (!mounted) return;
+          _showError('Error: No se recibió token del servidor');
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+          return;
+        }
 
         await StorageService.saveToken(token);
         await StorageService.saveRole(role);
         await StorageService.saveUserId(userId);
         await StorageService.saveUserName(userName);
 
+        if (!mounted) return;
         _navigateToHome(role);
       } else {
+        print('❌ Credenciales inválidas - Status: ${response.statusCode}');
+        if (!mounted) return;
         _showError('Credenciales inválidas');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Error en login: $e');
+      print('❌ Stack trace: $stackTrace');
       if (!mounted) return;
-      _showError('Error de conexión');
+      _showError('Error al iniciar sesión: ${e.toString()}');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );

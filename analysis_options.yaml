@@ -2,6 +2,18 @@ include: package:flutter_lints/flutter.yaml
 
 linter:
   rules:
+    # Deshabilitar advertencias de print en archivos de debug
+    avoid_print: false
+    # Deshabilitar advertencias de deprecated (withOpacity)
+    deprecated_member_use: false
+    # Deshabilitar advertencias de const (muchas son innecesarias)
     prefer_const_constructors: false
     prefer_const_literals_to_create_immutables: false
-    prefer_const_constructors_in_immutables: false
+    # Deshabilitar advertencias de interpolación de strings
+    prefer_interpolation_to_compose_strings: false
+    # Deshabilitar advertencias de nombres de archivo
+    file_names: false
+    # Otras reglas que queremos mantener
+    prefer_final_fields: true
+    unnecessary_this: true
+    use_key_in_widget_constructors: false

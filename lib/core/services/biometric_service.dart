@@ -11,7 +11,7 @@ class BiometricService {
     try {
       return await _auth.isDeviceSupported();
     } catch (e) {
-      print('Error verificando soporte biométrico: $e');
+      // Error verificando soporte biométrico
       return false;
     }
   }
@@ -21,7 +21,7 @@ class BiometricService {
     try {
       return await _auth.canCheckBiometrics;
     } catch (e) {
-      print('Error verificando biometría disponible: $e');
+      // Error verificando biometría disponible
       return false;
     }
   }
@@ -31,7 +31,7 @@ class BiometricService {
     try {
       return await _auth.getAvailableBiometrics();
     } catch (e) {
-      print('Error obteniendo biometrías disponibles: $e');
+      // Error obteniendo biometrías disponibles
       return [];
     }
   }
@@ -46,21 +46,18 @@ class BiometricService {
       // Verificar si el dispositivo soporta biometría
       final isSupported = await isDeviceSupported();
       if (!isSupported) {
-        print('El dispositivo no soporta autenticación biométrica');
         return false;
       }
 
       // Verificar si hay biometría configurada
       final canCheck = await canCheckBiometrics();
       if (!canCheck) {
-        print('No hay biometría configurada en el dispositivo');
         return false;
       }
 
       // Obtener biometrías disponibles
       final availableBiometrics = await getAvailableBiometrics();
       if (availableBiometrics.isEmpty) {
-        print('No hay biometrías disponibles');
         return false;
       }
 
@@ -95,29 +92,11 @@ class BiometricService {
 
       return authenticated;
     } on PlatformException catch (e) {
-      print('Error de plataforma en autenticación biométrica: ${e.code} - ${e.message}');
-      
-      // Manejar errores específicos
-      switch (e.code) {
-        case 'NotAvailable':
-          print('La autenticación biométrica no está disponible');
-          break;
-        case 'NotEnrolled':
-          print('No hay biometría registrada en el dispositivo');
-          break;
-        case 'LockedOut':
-          print('Demasiados intentos fallidos. Bloqueado temporalmente');
-          break;
-        case 'PermanentlyLockedOut':
-          print('Bloqueado permanentemente. Usa otro método de autenticación');
-          break;
-        default:
-          print('Error desconocido: ${e.code}');
-      }
-      
+      // Manejar errores específicos de la plataforma
+      // Los errores se manejan silenciosamente en producción
       return false;
     } catch (e) {
-      print('Error inesperado en autenticación biométrica: $e');
+      // Error inesperado en autenticación biométrica
       return false;
     }
   }

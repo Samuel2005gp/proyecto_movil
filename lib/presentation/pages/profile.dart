@@ -343,56 +343,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Habilitar biometría
       final biometricType = await BiometricService.getBiometricTypeMessage();
       
-      // Solicitar autenticación biométrica para confirmar
-      final authenticated = await BiometricService.authenticate(
-        localizedReason: 'Confirma tu identidad para habilitar $biometricType',
-      );
-
-      if (!authenticated) {
-        if (!mounted) return;
-        SnackBarHelper.showError(context, 'Autenticación cancelada');
-        return;
-      }
-
       // Solicitar credenciales para guardar
-      if (!mounted) return;
       final credentials = await _showCredentialsDialog();
       
       if (credentials == null) {
-        if (!mounted) return;
-        SnackBarHelper.showError(context, 'Se requieren las credenciales');
+        // Usuario canceló
         return;
       }
 
       // Verificar credenciales con el servidor
       try {
+        print('🔐 Verificando credenciales: ${credentials['email']}');
+        
+        // Mostrar indicador de carga
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(color: AppTheme.primary),
+          ),
+        );
+        
         final response = await ApiService.post(
           ApiConstants.login,
           {'correo': credentials['email'], 'contrasena': credentials['password']},
         );
 
+        print('🔐 Respuesta del servidor: ${response.statusCode}');
+
+        // Cerrar indicador de carga
+        if (mounted) Navigator.of(context).pop();
+
         if (response.statusCode == 200) {
           // Guardar credenciales y habilitar
+          print('🔐 Credenciales correctas, guardando...');
+          
           await StorageService.saveBiometricCredentials(
             credentials['email']!,
             credentials['password']!,
           );
           await StorageService.setBiometricEnabled(true);
           
-          setState(() => _biometricEnabled = true);
+          // Verificar que se guardaron
+          final savedEmail = await StorageService.getBiometricEmail();
+          final savedPassword = await StorageService.getBiometricPassword();
+          print('🔐 Guardado - Email: ${savedEmail != null ? "✅" : "❌"}, Password: ${savedPassword != null ? "✅" : "❌"}');
           
-          if (!mounted) return;
-          SnackBarHelper.showSuccess(
-            context,
-            '$biometricType habilitado correctamente',
-          );
+          if (mounted) {
+            setState(() => _biometricEnabled = true);
+            SnackBarHelper.showSuccess(
+              context,
+              '$biometricType habilitado correctamente',
+            );
+          }
         } else {
-          if (!mounted) return;
-          SnackBarHelper.showError(context, 'Credenciales incorrectas');
+          print('❌ Credenciales incorrectas');
+          if (mounted) {
+            SnackBarHelper.showError(context, 'Credenciales incorrectas. Verifica tu correo y contraseña.');
+          }
         }
       } catch (e) {
-        if (!mounted) return;
-        SnackBarHelper.showError(context, 'Error al verificar credenciales');
+        print('❌ Error al verificar credenciales: $e');
+        
+        // Cerrar indicador de carga si está abierto
+        if (mounted) {
+          try {
+            Navigator.of(context).pop();
+          } catch (_) {}
+        }
+        
+        if (mounted) {
+          SnackBarHelper.showError(context, 'Error al verificar credenciales');
+        }
       }
     } else {
       // Deshabilitar biometría
