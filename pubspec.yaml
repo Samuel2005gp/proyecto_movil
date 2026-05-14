@@ -27,9 +27,10 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/Logo.png"
+  image_path: "assets/images/high_life_logo.jpg"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/Logo.png
+    - assets/images/high_life_logo.jpg

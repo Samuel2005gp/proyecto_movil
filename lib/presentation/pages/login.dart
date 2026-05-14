@@ -164,16 +164,35 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Logo High Life
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    width: 150,
+                    height: 150,
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFEAD8B1),
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primary.withValues(alpha: 0.4),
+                          blurRadius: 24,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.spa,
-                        size: 60, color: AppTheme.primary),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/high_life_logo.jpg',
+                        width: 150,
+                        height: 150,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   Text(
                     'Iniciar Sesión',
                     style: Theme.of(context).textTheme.displaySmall,
