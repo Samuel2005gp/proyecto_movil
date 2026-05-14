@@ -9,7 +9,7 @@
 
 ### 2. Flutter Configurado para Web
 - ✅ Detección automática de plataforma (`kIsWeb`)
-- ✅ URL correcta para web: `http://localhost:3001`
+- ✅ URL correcta para web: `https://backend-highsoft-sena-production.up.railway.app`
 
 ## 🚀 Cómo Probar
 
@@ -42,17 +42,17 @@ flutter run -d chrome
    - Busca errores de CORS o red
 
 3. **Prueba la API directamente en el navegador:**
-   - Ve a: `http://localhost:3001/auth/login`
+   - Ve a: `https://backend-highsoft-sena-production.up.railway.app/auth/login`
    - Deberías ver un error de método (normal)
 
 4. **Verifica la URL en la consola de Flutter:**
-   - Debería mostrar: `http://localhost:3001/auth/login`
+   - Debería mostrar: `https://backend-highsoft-sena-production.up.railway.app/auth/login`
 
 ## 📱 Diferencias por Plataforma
 
 | Plataforma | URL Base |
 |------------|----------|
-| Flutter Web | `http://localhost:3001` |
+| Flutter Web | `https://backend-highsoft-sena-production.up.railway.app` |
 | Android Emulador | `http://10.0.2.2:3001` |
 | Dispositivo Físico | `http://192.168.20.207:3001` |
 

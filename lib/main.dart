@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/api_service.dart';
+import 'core/services/biometric_service.dart';
 import 'core/constants/api_constants.dart';
 import 'presentation/pages/login.dart';
 import 'presentation/pages/admin_home.dart';
@@ -43,6 +44,8 @@ class AuthChecker extends StatefulWidget {
 }
 
 class _AuthCheckerState extends State<AuthChecker> {
+  bool _showBiometricOption = false;
+
   @override
   void initState() {
     super.initState();
@@ -58,10 +61,206 @@ class _AuthCheckerState extends State<AuthChecker> {
       final role = await StorageService.getRole();
       _navigateToHome(role);
     } else {
+      // Verificar si la biometría está habilitada y disponible
+      final biometricEnabled = await StorageService.isBiometricEnabled();
+      final biometricAvailable = await BiometricService.isBiometricAvailable();
+      
+      if (biometricEnabled && biometricAvailable) {
+        setState(() {
+          _showBiometricOption = true;
+        });
+        // Mostrar opción de login biométrico
+        _showBiometricLogin();
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    }
+  }
+
+  Future<void> _showBiometricLogin() async {
+    // Esperar un momento para que la UI se estabilice
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+
+    // Obtener el tipo de biometría antes de construir el diálogo
+    final biometricType = await BiometricService.getBiometricTypeMessage();
+
+    if (!mounted) return;
+
+    // Mostrar diálogo con opción de biometría
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.fingerprint, color: AppTheme.primary, size: 28),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Inicio Rápido',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Usa tu $biometricType para acceder rápidamente',
+              style: const TextStyle(fontSize: 15, color: AppTheme.muted),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: AppTheme.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Toca "Usar Biometría" para continuar',
+                      style: TextStyle(fontSize: 13, color: AppTheme.primary.withValues(alpha: 0.8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Usar Contraseña', style: TextStyle(color: AppTheme.muted)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.fingerprint, size: 20),
+            label: const Text('Usar Biometría'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (result == true) {
+      await _authenticateWithBiometric();
+    } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
+  }
+
+  Future<void> _authenticateWithBiometric() async {
+    try {
+      final authenticated = await BiometricService.authenticate(
+        localizedReason: 'Autentícate para acceder a la aplicación',
+      );
+
+      if (!mounted) return;
+
+      if (authenticated) {
+        // Obtener credenciales guardadas
+        final email = await StorageService.getBiometricEmail();
+        final password = await StorageService.getBiometricPassword();
+
+        if (email != null && password != null) {
+          // Intentar login con las credenciales guardadas
+          await _loginWithCredentials(email, password);
+        } else {
+          _showError('No se encontraron credenciales guardadas');
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
+      } else {
+        // Autenticación fallida o cancelada
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Error en la autenticación biométrica');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
+  Future<void> _loginWithCredentials(String email, String password) async {
+    try {
+      final response = await ApiService.post(
+        ApiConstants.login,
+        {'correo': email, 'contrasena': password},
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+        final role = data['rol'];
+        final userId = data['id'];
+        final userName = data['nombre'] ?? 'Usuario';
+
+        await StorageService.saveToken(token);
+        await StorageService.saveRole(role);
+        await StorageService.saveUserId(userId);
+        await StorageService.saveUserName(userName);
+
+        _navigateToHome(role);
+      } else {
+        _showError('Credenciales inválidas');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Error de conexión');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.destructive,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   void _navigateToHome(String? role) {
@@ -83,10 +282,22 @@ class _AuthCheckerState extends State<AuthChecker> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: Center(
-        child: CircularProgressIndicator(
-          color: AppTheme.primary,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+              color: AppTheme.primary,
+            ),
+            if (_showBiometricOption) ...[
+              const SizedBox(height: 24),
+              const Text(
+                'Preparando autenticación biométrica...',
+                style: TextStyle(color: AppTheme.muted, fontSize: 14),
+              ),
+            ],
+          ],
         ),
       ),
     );

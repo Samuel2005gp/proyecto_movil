@@ -29,7 +29,7 @@ static const String baseUrl = 'http://TU_IP_LOCAL:3001/api';
 **Ejemplos:**
 - Si estás en la misma red: `http://192.168.1.100:3001/api`
 - Si usas emulador Android: `http://10.0.2.2:3001/api`
-- Si usas localhost en web: `http://localhost:3001/api`
+- Si usas localhost en web: `https://backend-highsoft-sena-production.up.railway.app/api`
 
 ### 3. Ejecutar la Aplicación
 

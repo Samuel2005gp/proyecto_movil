@@ -15,7 +15,7 @@ static const String baseUrl = 'http://TU_IP_LOCAL:3001/api';
 **Ejemplos:**
 - Misma red WiFi: `http://192.168.1.100:3001/api`
 - Emulador Android: `http://10.0.2.2:3001/api`
-- Localhost (web): `http://localhost:3001/api`
+- Localhost (web): `https://backend-highsoft-sena-production.up.railway.app/api`
 
 ---
 

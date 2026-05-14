@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/biometric_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
@@ -71,7 +72,9 @@ class _LoginScreenState extends State<LoginScreen> {
         await StorageService.saveUserName(fullName);
 
         if (!mounted) return;
-        _navigateToHome(role);
+        
+        // Ofrecer configurar autenticación biométrica si está disponible
+        await _offerBiometricSetup(email, password, role);
       } else {
         final errorData = jsonDecode(response.body);
         _showError(errorData['message'] ?? 'Credenciales incorrectas');
@@ -111,6 +114,71 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showError(String message) => SnackBarHelper.showError(context, message);
+
+  Future<void> _offerBiometricSetup(String email, String password, String role) async {
+    // Verificar si ya está habilitado
+    final alreadyEnabled = await StorageService.isBiometricEnabled();
+    if (alreadyEnabled) {
+      _navigateToHome(role);
+      return;
+    }
+
+    // Verificar si el dispositivo soporta biometría
+    final isAvailable = await BiometricService.isBiometricAvailable();
+    if (!isAvailable) {
+      _navigateToHome(role);
+      return;
+    }
+
+    // Obtener el tipo de biometría disponible
+    final biometricType = await BiometricService.getBiometricTypeMessage();
+
+    if (!mounted) return;
+
+    // Mostrar diálogo para configurar biometría
+    final shouldEnable = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.fingerprint, color: AppTheme.primary, size: 28),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('Acceso Rápido')),
+          ],
+        ),
+        content: Text(
+          '¿Deseas habilitar $biometricType para iniciar sesión más rápido la próxima vez?',
+          style: const TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Ahora no'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Habilitar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldEnable == true) {
+      // Guardar credenciales y habilitar biometría
+      await StorageService.saveBiometricCredentials(email, password);
+      await StorageService.setBiometricEnabled(true);
+      
+      if (!mounted) return;
+      SnackBarHelper.showSuccess(
+        context,
+        '$biometricType habilitado correctamente',
+      );
+    }
+
+    if (!mounted) return;
+    _navigateToHome(role);
+  }
 
   /// Normaliza el nombre del rol para que siempre sea consistente
   /// independientemente de cómo esté guardado en la BD

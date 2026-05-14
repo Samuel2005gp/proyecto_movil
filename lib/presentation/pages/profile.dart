@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
+import '../../core/services/biometric_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
@@ -18,11 +19,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _user;
   bool _isLoading = true;
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _checkBiometricStatus();
   }
 
   Future<void> _loadUserProfile() async {
@@ -66,6 +70,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (_) {}
     await _loadFromStorage();
+  }
+
+  Future<void> _checkBiometricStatus() async {
+    final available = await BiometricService.isBiometricAvailable();
+    final enabled = await StorageService.isBiometricEnabled();
+    setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = enabled;
+    });
   }
 
   Future<void> _loadFromStorage() async {
@@ -177,6 +190,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           MaterialPageRoute(
                               builder: (_) =>
                                   ChangePasswordScreen(userId: _user!.id)))),
+                  
+                  // Opción de autenticación biométrica
+                  if (_biometricAvailable) _buildBiometricToggle(),
+                  
                   const SizedBox(height: 32),
                   _buildLogoutButton(),
                 ],
@@ -280,6 +297,203 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14))),
+      ),
+    );
+  }
+
+  Widget _buildBiometricToggle() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: AppTheme.card,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6)
+          ]),
+      child: Row(children: [
+        Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.fingerprint, color: AppTheme.primary, size: 22)),
+        const SizedBox(width: 14),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Acceso Biométrico', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              SizedBox(height: 2),
+              Text('Huella o reconocimiento facial', style: TextStyle(fontSize: 12, color: AppTheme.muted)),
+            ],
+          ),
+        ),
+        Switch(
+          value: _biometricEnabled,
+          onChanged: _toggleBiometric,
+          activeColor: AppTheme.primary,
+        ),
+      ]),
+    );
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      // Habilitar biometría
+      final biometricType = await BiometricService.getBiometricTypeMessage();
+      
+      // Solicitar autenticación biométrica para confirmar
+      final authenticated = await BiometricService.authenticate(
+        localizedReason: 'Confirma tu identidad para habilitar $biometricType',
+      );
+
+      if (!authenticated) {
+        if (!mounted) return;
+        SnackBarHelper.showError(context, 'Autenticación cancelada');
+        return;
+      }
+
+      // Solicitar credenciales para guardar
+      if (!mounted) return;
+      final credentials = await _showCredentialsDialog();
+      
+      if (credentials == null) {
+        if (!mounted) return;
+        SnackBarHelper.showError(context, 'Se requieren las credenciales');
+        return;
+      }
+
+      // Verificar credenciales con el servidor
+      try {
+        final response = await ApiService.post(
+          ApiConstants.login,
+          {'correo': credentials['email'], 'contrasena': credentials['password']},
+        );
+
+        if (response.statusCode == 200) {
+          // Guardar credenciales y habilitar
+          await StorageService.saveBiometricCredentials(
+            credentials['email']!,
+            credentials['password']!,
+          );
+          await StorageService.setBiometricEnabled(true);
+          
+          setState(() => _biometricEnabled = true);
+          
+          if (!mounted) return;
+          SnackBarHelper.showSuccess(
+            context,
+            '$biometricType habilitado correctamente',
+          );
+        } else {
+          if (!mounted) return;
+          SnackBarHelper.showError(context, 'Credenciales incorrectas');
+        }
+      } catch (e) {
+        if (!mounted) return;
+        SnackBarHelper.showError(context, 'Error al verificar credenciales');
+      }
+    } else {
+      // Deshabilitar biometría
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Deshabilitar Acceso Biométrico'),
+          content: const Text('¿Estás seguro de que deseas deshabilitar el acceso biométrico?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Deshabilitar', style: TextStyle(color: AppTheme.destructive)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await StorageService.clearBiometricCredentials();
+        await StorageService.setBiometricEnabled(false);
+        setState(() => _biometricEnabled = false);
+        
+        if (!mounted) return;
+        SnackBarHelper.showSuccess(context, 'Acceso biométrico deshabilitado');
+      }
+    }
+  }
+
+  Future<Map<String, String>?> _showCredentialsDialog() async {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool showPassword = false;
+
+    return showDialog<Map<String, String>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Confirmar Credenciales'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Ingresa tus credenciales para habilitar el acceso biométrico',
+                style: TextStyle(fontSize: 14, color: AppTheme.muted),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Correo electrónico',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                obscureText: !showPassword,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(showPassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setDialogState(() => showPassword = !showPassword),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                emailController.dispose();
+                passwordController.dispose();
+                Navigator.pop(ctx, null);
+              },
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final email = emailController.text.trim();
+                final password = passwordController.text.trim();
+                emailController.dispose();
+                passwordController.dispose();
+                
+                if (email.isEmpty || password.isEmpty) {
+                  SnackBarHelper.showError(context, 'Completa todos los campos');
+                  return;
+                }
+                
+                Navigator.pop(ctx, {'email': email, 'password': password});
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
+        ),
       ),
     );
   }
