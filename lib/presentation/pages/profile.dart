@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
@@ -184,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       }),
                   _buildOptionTile(
                       icon: Icons.lock_outline,
-                      label: 'Cambiar Contrasena',
+                      label: 'Cambiar Contraseña',
                       onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -790,7 +790,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           {'currentPassword': _currentCtrl.text, 'newPassword': _newCtrl.text});
       if (response.statusCode == 200) {
         if (!mounted) return;
-        SnackBarHelper.showSuccess(context, 'Contrasena actualizada');
+        SnackBarHelper.showSuccess(context, 'Contraseña actualizada');
         Navigator.pop(context);
       } else {
         String errorMsg = 'Error ${response.statusCode}';
@@ -814,7 +814,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cambiar Contrasena')),
+      appBar: AppBar(title: const Text('Cambiar Contraseña')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -825,7 +825,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   controller: _currentCtrl,
                   obscureText: !_showCurrent,
                   decoration: InputDecoration(
-                      labelText: 'Contrasena actual',
+                      labelText: 'Contraseña actual',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                           icon: Icon(_showCurrent
@@ -840,7 +840,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   controller: _newCtrl,
                   obscureText: !_showNew,
                   decoration: InputDecoration(
-                      labelText: 'Nueva contrasena',
+                      labelText: 'Nueva contraseña',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                           icon: Icon(_showNew
@@ -850,7 +850,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                               setState(() => _showNew = !_showNew))),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Campo requerido';
-                    if (v.length < 6) return 'Minimo 6 caracteres';
+                    if (v.length < 6) return 'Mínimo 6 caracteres';
                     return null;
                   }),
               const SizedBox(height: 16),
@@ -858,7 +858,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   controller: _confirmCtrl,
                   obscureText: !_showConfirm,
                   decoration: InputDecoration(
-                      labelText: 'Confirmar contrasena',
+                      labelText: 'Confirmar contraseña',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                           icon: Icon(_showConfirm
@@ -869,7 +869,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Campo requerido';
                     if (v != _newCtrl.text)
-                      return 'Las contrasenas no coinciden';
+                      return 'Las contraseñas no coinciden';
                     return null;
                   }),
               const SizedBox(height: 32),
@@ -883,7 +883,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
-                          : const Text('Actualizar Contrasena'))),
+                          : const Text('Actualizar Contraseña'))),
             ])),
       ),
     );

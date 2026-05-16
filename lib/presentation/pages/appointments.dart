@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -195,11 +195,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'completada':
-        return const Color(0xFF1D4ED8); // azul
+        return const Color(0xFF60A5FA); // azul suave
       case 'pendiente':
-        return const Color(0xFFD97706); // amarillo
+        return const Color(0xFFFBBF24); // amarillo suave
       case 'cancelada':
-        return const Color(0xFFDC2626); // rojo
+        return const Color(0xFFF87171); // rojo suave
       default:
         return AppTheme.muted;
     }
@@ -208,11 +208,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Color _getStatusBgColor(String status) {
     switch (status.toLowerCase()) {
       case 'completada':
-        return const Color(0xFFDBEAFE); // azul claro
+        return const Color(0xFFEFF6FF); // azul claro
       case 'pendiente':
-        return const Color(0xFFFEF9C3); // amarillo claro
+        return const Color(0xFFFEFCE8); // amarillo claro
       case 'cancelada':
-        return const Color(0xFFFCE7F3); // rojo claro
+        return const Color(0xFFFEF2F2); // rojo claro
       default:
         return const Color(0xFFF3F4F6);
     }
@@ -485,11 +485,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Widget _buildLegend() {
     return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      _legendItem(AppTheme.colorEdit, 'Pendiente'),
+      _legendItem(_getStatusColor('pendiente'), 'Pendiente'),
       const SizedBox(width: 16),
-      _legendItem(AppTheme.colorSuccess, 'Completada'),
+      _legendItem(_getStatusColor('completada'), 'Completada'),
       const SizedBox(width: 16),
-      _legendItem(AppTheme.destructive, 'Cancelada'),
+      _legendItem(_getStatusColor('cancelada'), 'Cancelada'),
     ]);
   }
 

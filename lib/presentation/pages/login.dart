@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../../core/services/api_service.dart';
@@ -72,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await StorageService.saveUserName(fullName);
 
         if (!mounted) return;
-        
+
         // Ofrecer configurar autenticación biométrica si está disponible
         await _offerBiometricSetup(email, password, role);
       } else {
@@ -115,13 +115,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showError(String message) => SnackBarHelper.showError(context, message);
 
-  Future<void> _offerBiometricSetup(String email, String password, String role) async {
+  Future<void> _offerBiometricSetup(
+      String email, String password, String role) async {
     print('🔐 _offerBiometricSetup iniciado');
-    
+
     // Verificar si ya está habilitado
     final alreadyEnabled = await StorageService.isBiometricEnabled();
     print('🔐 Biometría ya habilitada: $alreadyEnabled');
-    
+
     if (alreadyEnabled) {
       _navigateToHome(role);
       return;
@@ -130,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // Verificar si el dispositivo soporta biometría
     final isAvailable = await BiometricService.isBiometricAvailable();
     print('🔐 Biometría disponible en dispositivo: $isAvailable');
-    
+
     if (!isAvailable) {
       _navigateToHome(role);
       return;
@@ -178,12 +179,13 @@ class _LoginScreenState extends State<LoginScreen> {
       print('🔐 Guardando credenciales: $email');
       await StorageService.saveBiometricCredentials(email, password);
       await StorageService.setBiometricEnabled(true);
-      
+
       // Verificar que se guardaron correctamente
       final savedEmail = await StorageService.getBiometricEmail();
       final savedPassword = await StorageService.getBiometricPassword();
-      print('🔐 Credenciales guardadas - Email: ${savedEmail != null ? "✅" : "❌"}, Password: ${savedPassword != null ? "✅" : "❌"}');
-      
+      print(
+          '🔐 Credenciales guardadas - Email: ${savedEmail != null ? "✅" : "❌"}, Password: ${savedPassword != null ? "✅" : "❌"}');
+
       if (!mounted) return;
       SnackBarHelper.showSuccess(
         context,
@@ -225,165 +227,177 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        color: AppTheme.primary,
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Container(
-              width: 350,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: AppTheme.card,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  )
-                ],
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 60),
+
+              // ── Logo de la empresa ─────────────────────────────────────
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(alpha: 0.2),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/high_life_logo.jpg',
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 48),
+
+              // ── Campo correo ─────────────────────────────────────────
+              _buildField(
+                controller: _emailController,
+                hint: 'Correo electrónico',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 14),
+
+              // ── Campo contraseña ─────────────────────────────────────
+              _buildField(
+                controller: _passwordController,
+                hint: 'Contraseña',
+                icon: Icons.lock_outline,
+                obscure: !_showPassword,
+                suffix: IconButton(
+                  icon: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility,
+                    color: AppTheme.muted,
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      setState(() => _showPassword = !_showPassword),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // ── Olvidé contraseña ────────────────────────────────────
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen()),
+                  ),
+                  child: Text(
+                    '¿Olvidaste tu contraseña?',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 36),
+
+              // ── Botón Iniciar Sesión ──────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text(
+                          'Iniciar Sesión',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Registro ─────────────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo High Life
-                  Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFEAD8B1),
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.4),
-                          blurRadius: 24,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/high_life_logo.jpg',
-                        width: 150,
-                        height: 150,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Iniciar Sesión',
-                    style: Theme.of(context).textTheme.displaySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Bienvenido de vuelta',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.muted,
-                        ),
-                  ),
-                  const SizedBox(height: 32),
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: !_showPassword,
-                    decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _showPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () =>
-                            setState(() => _showPassword = !_showPassword),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Iniciar Sesión'),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Forgot Password
+                  Text('¿No tienes cuenta? ',
+                      style: TextStyle(color: AppTheme.muted, fontSize: 14)),
                   GestureDetector(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const ForgotPasswordScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
                     ),
                     child: Text(
-                      '¿Olvidaste tu contraseña?',
+                      'Regístrate',
                       style: TextStyle(
                         color: AppTheme.primary,
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Registro
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '¿No tienes cuenta? ',
-                        style: TextStyle(color: AppTheme.muted, fontSize: 14),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterScreen(),
-                          ),
-                        ),
-                        child: Text(
-                          'Regístrate',
-                          style: TextStyle(
-                            color: AppTheme.primary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 40),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscure = false,
+    Widget? suffix,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscure,
+        style: const TextStyle(fontSize: 15),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: AppTheme.muted, fontSize: 14),
+          prefixIcon: Icon(icon, color: AppTheme.muted, size: 20),
+          suffixIcon: suffix,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
     );

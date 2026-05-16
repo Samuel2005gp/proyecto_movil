@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
@@ -74,7 +74,7 @@ class _ClientScreenState extends State<ClientScreen> {
   }
 
   Future<void> _deleteClient(int id) async {
-    final confirm = await _showConfirmDialog('Â¿Eliminar este cliente?');
+    final confirm = await _showConfirmDialog('¿Eliminar este cliente?');
     if (!confirm) return;
     try {
       final response = await ApiService.delete(ApiConstants.clientDetail(id));
