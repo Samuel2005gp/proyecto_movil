@@ -32,6 +32,9 @@ class ApiConstants {
   // Services endpoints
   static const String services = '/services';
 
+  // Categories endpoints
+  static const String categories = '/categories';
+
   // Employees endpoints
   static const String employees = '/employees';
   static const String employeesDisponibles = '/employees/disponibles';

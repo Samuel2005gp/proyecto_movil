@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
+import 'package:http/http.dart' as http;
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -88,6 +91,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _detailRow('Nombre:', service['name'] ?? service['nombre'] ?? ''),
+            if ((service['category'] ?? service['categoria']) != null)
+              _detailRow('Categoría:',
+                  service['category'] ?? service['categoria'] ?? ''),
             _detailRow('Precio:',
                 '\$${(service['price'] ?? service['precio'] ?? 0).toString()}'),
             _detailRow('Duración:',
@@ -302,6 +308,88 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   final _durationCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   bool _isSaving = false;
+  List<Map<String, dynamic>> _categories = [];
+  int? _selectedCategoryId;
+  bool _loadingCategories = true;
+  File? _selectedImage;
+  String? _imageUrl;
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final response = await ApiService.get('${ApiConstants.categories}?all=true');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _categories = data.cast<Map<String, dynamic>>();
+          _loadingCategories = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _loadingCategories = false);
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error al cargar categorías');
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error al seleccionar imagen');
+      }
+    }
+  }
+
+  Future<String?> _uploadImage() async {
+    if (_selectedImage == null) return null;
+
+    try {
+      final token = await ApiService.getToken();
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConstants.baseUrl}/upload/image'),
+      );
+      
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(
+        await http.MultipartFile.fromPath('image', _selectedImage!.path),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['url'] as String?;
+      } else {
+        throw Exception('Error al subir imagen');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error al subir imagen: ${e.toString()}');
+      }
+      return null;
+    }
+  }
 
   @override
   void dispose() {
@@ -314,13 +402,32 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCategoryId == null) {
+      SnackBarHelper.showError(context, 'Selecciona una categoría');
+      return;
+    }
     setState(() => _isSaving = true);
     try {
+      // Subir imagen si hay una seleccionada
+      String? uploadedImageUrl;
+      if (_selectedImage != null) {
+        uploadedImageUrl = await _uploadImage();
+        if (uploadedImageUrl == null) {
+          if (mounted) {
+            SnackBarHelper.showError(context, 'Error al subir la imagen');
+          }
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
+
       final response = await ApiService.post(ApiConstants.services, {
         'name': _nameCtrl.text.trim(),
         'price': double.tryParse(_priceCtrl.text) ?? 0,
         'duration': int.tryParse(_durationCtrl.text) ?? 0,
         'description': _descCtrl.text.trim(),
+        'FK_categoria_servicios': _selectedCategoryId,
+        if (uploadedImageUrl != null) 'imagen': uploadedImageUrl,
       });
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (!mounted) return;
@@ -328,10 +435,12 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         Navigator.pop(context, true);
       } else {
         final err = jsonDecode(response.body);
+        if (!mounted) return;
         SnackBarHelper.showError(
             context, err['error']?.toString() ?? 'Error al crear servicio');
       }
     } catch (e) {
+      if (!mounted) return;
       SnackBarHelper.showError(context, e.toString());
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -342,60 +451,142 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Nuevo Servicio')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(children: [
-            TextFormField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Nombre *', prefixIcon: Icon(Icons.spa_outlined)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _priceCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'Precio *', prefixIcon: Icon(Icons.attach_money)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _durationCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'Duración (min)',
-                  prefixIcon: Icon(Icons.access_time)),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                  labelText: 'Descripción',
-                  prefixIcon: Icon(Icons.description_outlined)),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _save,
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Crear Servicio'),
+      body: _loadingCategories
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(children: [
+                  TextFormField(
+                    controller: _nameCtrl,
+                    decoration: const InputDecoration(
+                        labelText: 'Nombre *',
+                        prefixIcon: Icon(Icons.spa_outlined)),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Campo requerido'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: _selectedCategoryId,
+                    decoration: const InputDecoration(
+                      labelText: 'Categoría *',
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
+                    items: _categories.map((cat) {
+                      return DropdownMenuItem<int>(
+                        value: cat['id'] as int,
+                        child: Text(cat['nombre'] ?? cat['name'] ?? ''),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedCategoryId = value);
+                    },
+                    validator: (v) =>
+                        v == null ? 'Selecciona una categoría' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _priceCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Precio *',
+                        prefixIcon: Icon(Icons.attach_money)),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Campo requerido'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _durationCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Duración (min)',
+                        prefixIcon: Icon(Icons.access_time)),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _descCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                        labelText: 'Descripción',
+                        prefixIcon: Icon(Icons.description_outlined)),
+                  ),
+                  const SizedBox(height: 24),
+                  // Selector de imagen
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.image_outlined, color: AppTheme.primary),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Imagen del servicio',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (_selectedImage != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              _selectedImage!,
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _pickImage,
+                            icon: Icon(_selectedImage == null
+                                ? Icons.add_photo_alternate
+                                : Icons.change_circle),
+                            label: Text(_selectedImage == null
+                                ? 'Seleccionar imagen'
+                                : 'Cambiar imagen'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _save,
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : const Text('Crear Servicio'),
+                    ),
+                  ),
+                ]),
               ),
             ),
-          ]),
-        ),
-      ),
     );
   }
 }
@@ -415,6 +606,9 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
   late TextEditingController _durationCtrl;
   late TextEditingController _descCtrl;
   bool _isSaving = false;
+  List<Map<String, dynamic>> _categories = [];
+  int? _selectedCategoryId;
+  bool _loadingCategories = true;
 
   @override
   void initState() {
@@ -431,6 +625,43 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         text: widget.service['description'] ??
             widget.service['descripcion'] ??
             '');
+    
+    // Obtener el categoryId del servicio
+    _selectedCategoryId = widget.service['categoryId'] ?? widget.service['FK_categoria_servicios'];
+    
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final response = await ApiService.get('${ApiConstants.categories}?all=true');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _categories = data.cast<Map<String, dynamic>>();
+          _loadingCategories = false;
+          
+          // Si no tenemos categoryId pero tenemos el nombre de la categoría, buscarla
+          if (_selectedCategoryId == null) {
+            final categoryName = widget.service['category'] ?? widget.service['categoria'];
+            if (categoryName != null) {
+              final cat = _categories.firstWhere(
+                (c) => (c['nombre'] ?? c['name']) == categoryName,
+                orElse: () => {},
+              );
+              if (cat.isNotEmpty) {
+                _selectedCategoryId = cat['id'] as int?;
+              }
+            }
+          }
+        });
+      }
+    } catch (e) {
+      setState(() => _loadingCategories = false);
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error al cargar categorías');
+      }
+    }
   }
 
   @override
@@ -444,6 +675,10 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCategoryId == null) {
+      SnackBarHelper.showError(context, 'Selecciona una categoría');
+      return;
+    }
     setState(() => _isSaving = true);
     try {
       final id = widget.service['id'] as int;
@@ -452,6 +687,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         'price': double.tryParse(_priceCtrl.text) ?? 0,
         'duration': int.tryParse(_durationCtrl.text) ?? 0,
         'description': _descCtrl.text.trim(),
+        'FK_categoria_servicios': _selectedCategoryId,
       });
       if (response.statusCode == 200) {
         if (!mounted) return;
@@ -459,10 +695,12 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         Navigator.pop(context, true);
       } else {
         final err = jsonDecode(response.body);
+        if (!mounted) return;
         SnackBarHelper.showError(
             context, err['error']?.toString() ?? 'Error al actualizar');
       }
     } catch (e) {
+      if (!mounted) return;
       SnackBarHelper.showError(context, e.toString());
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -473,60 +711,86 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Editar Servicio')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(children: [
-            TextFormField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Nombre *', prefixIcon: Icon(Icons.spa_outlined)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _priceCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'Precio *', prefixIcon: Icon(Icons.attach_money)),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Campo requerido' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _durationCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'Duración (min)',
-                  prefixIcon: Icon(Icons.access_time)),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                  labelText: 'Descripción',
-                  prefixIcon: Icon(Icons.description_outlined)),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _save,
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Guardar Cambios'),
+      body: _loadingCategories
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(children: [
+                  TextFormField(
+                    controller: _nameCtrl,
+                    decoration: const InputDecoration(
+                        labelText: 'Nombre *',
+                        prefixIcon: Icon(Icons.spa_outlined)),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Campo requerido'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: _selectedCategoryId,
+                    decoration: const InputDecoration(
+                      labelText: 'Categoría *',
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
+                    items: _categories.map((cat) {
+                      return DropdownMenuItem<int>(
+                        value: cat['id'] as int,
+                        child: Text(cat['nombre'] ?? cat['name'] ?? ''),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedCategoryId = value);
+                    },
+                    validator: (v) =>
+                        v == null ? 'Selecciona una categoría' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _priceCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Precio *',
+                        prefixIcon: Icon(Icons.attach_money)),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Campo requerido'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _durationCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Duración (min)',
+                        prefixIcon: Icon(Icons.access_time)),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _descCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                        labelText: 'Descripción',
+                        prefixIcon: Icon(Icons.description_outlined)),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _save,
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : const Text('Guardar Cambios'),
+                    ),
+                  ),
+                ]),
               ),
             ),
-          ]),
-        ),
-      ),
     );
   }
 }
