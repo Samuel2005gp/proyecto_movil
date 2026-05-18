@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
@@ -363,7 +364,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     if (_selectedImage == null) return null;
 
     try {
-      final token = await ApiService.getToken();
+      final token = await StorageService.getToken();
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('${ApiConstants.baseUrl}/upload/image'),
@@ -609,6 +610,9 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
   List<Map<String, dynamic>> _categories = [];
   int? _selectedCategoryId;
   bool _loadingCategories = true;
+  File? _selectedImage;
+  String? _currentImageUrl;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -625,6 +629,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         text: widget.service['description'] ??
             widget.service['descripcion'] ??
             '');
+    
+    _currentImageUrl = widget.service['imagen'] ?? widget.service['image'];
     
     // Obtener el categoryId del servicio
     _selectedCategoryId = widget.service['categoryId'] ?? widget.service['FK_categoria_servicios'];
@@ -664,6 +670,58 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
     }
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error al seleccionar imagen');
+      }
+    }
+  }
+
+  Future<String?> _uploadImage() async {
+    if (_selectedImage == null) return null;
+
+    try {
+      final token = await StorageService.getToken();
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConstants.baseUrl}/upload/image'),
+      );
+      
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(
+        await http.MultipartFile.fromPath('image', _selectedImage!.path),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['url'] as String?;
+      } else {
+        throw Exception('Error al subir imagen');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(context, 'Error al subir imagen: ${e.toString()}');
+      }
+      return null;
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -681,6 +739,18 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
     }
     setState(() => _isSaving = true);
     try {
+      String? uploadedImageUrl;
+      if (_selectedImage != null) {
+        uploadedImageUrl = await _uploadImage();
+        if (uploadedImageUrl == null) {
+          if (mounted) {
+            SnackBarHelper.showError(context, 'Error al subir la imagen');
+          }
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
+
       final id = widget.service['id'] as int;
       final response = await ApiService.put('${ApiConstants.services}/$id', {
         'name': _nameCtrl.text.trim(),
@@ -688,6 +758,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         'duration': int.tryParse(_durationCtrl.text) ?? 0,
         'description': _descCtrl.text.trim(),
         'FK_categoria_servicios': _selectedCategoryId,
+        if (uploadedImageUrl != null) 'imagen': uploadedImageUrl,
       });
       if (response.statusCode == 200) {
         if (!mounted) return;
@@ -773,6 +844,79 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                     decoration: const InputDecoration(
                         labelText: 'Descripción',
                         prefixIcon: Icon(Icons.description_outlined)),
+                  ),
+                  const SizedBox(height: 24),
+                  // Selector de imagen
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.image_outlined, color: AppTheme.primary),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Imagen del servicio',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (_selectedImage != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              _selectedImage!,
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ] else if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              _currentImageUrl!,
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const SizedBox(
+                                      height: 150,
+                                      child: Center(
+                                          child: Icon(Icons.error_outline,
+                                              size: 40, color: AppTheme.muted))),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _pickImage,
+                            icon: Icon(_selectedImage == null
+                                ? Icons.add_photo_alternate
+                                : Icons.change_circle),
+                            label: Text(_selectedImage == null && _currentImageUrl == null
+                                ? 'Seleccionar imagen'
+                                : 'Cambiar imagen'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
