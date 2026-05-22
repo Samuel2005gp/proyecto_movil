@@ -7,6 +7,7 @@ import 'core/services/storage_service.dart';
 import 'core/services/api_service.dart';
 import 'core/services/biometric_service.dart';
 import 'core/constants/api_constants.dart';
+import 'core/utils/responsive_utils.dart';
 import 'presentation/pages/login.dart';
 import 'presentation/pages/admin_home.dart';
 import 'presentation/pages/empleado_home.dart';
@@ -16,6 +17,7 @@ import 'presentation/pages/clients.dart';
 import 'presentation/pages/sales.dart';
 import 'presentation/pages/services.dart';
 import 'presentation/pages/profile.dart';
+import 'presentation/widgets/responsive_dashboard.dart';
 
 void main() {
   runApp(const MyApp());
@@ -44,8 +46,6 @@ class AuthChecker extends StatefulWidget {
 }
 
 class _AuthCheckerState extends State<AuthChecker> {
-  bool _showBiometricOption = false;
-
   @override
   void initState() {
     super.initState();
@@ -54,10 +54,10 @@ class _AuthCheckerState extends State<AuthChecker> {
 
   Future<void> _checkAuth() async {
     print('🔐 _checkAuth iniciado');
-    
+
     final biometricEnabled = await StorageService.isBiometricEnabled();
     final biometricAvailable = await BiometricService.isBiometricAvailable();
-    
+
     print('🔐 Biometría habilitada: $biometricEnabled');
     print('🔐 Biometría disponible: $biometricAvailable');
 
@@ -66,16 +66,13 @@ class _AuthCheckerState extends State<AuthChecker> {
     // Si la biometría está habilitada y disponible, SIEMPRE mostrar la opción
     if (biometricEnabled && biometricAvailable) {
       print('🔐 Mostrando diálogo de biometría');
-      setState(() {
-        _showBiometricOption = true;
-      });
       // Mostrar opción de login biométrico
       await _showBiometricLogin();
     } else {
       // Si NO hay biometría, verificar si hay sesión
       final hasSession = await StorageService.hasActiveSession();
       print('🔐 Tiene sesión activa (sin biometría): $hasSession');
-      
+
       if (hasSession) {
         // Hay sesión pero no hay biometría, ir directo al home
         print('🔐 Sesión activa sin biometría, navegando al home');
@@ -96,7 +93,7 @@ class _AuthCheckerState extends State<AuthChecker> {
   Future<void> _showBiometricLogin() async {
     // Esperar un momento para que la UI se estabilice
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (!mounted) return;
 
     // Obtener el tipo de biometría antes de construir el diálogo
@@ -108,75 +105,87 @@ class _AuthCheckerState extends State<AuthChecker> {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      builder: (dialogContext) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.fingerprint,
+                    color: AppTheme.primary, size: 28),
               ),
-              child: const Icon(Icons.fingerprint, color: AppTheme.primary, size: 28),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Inicio Rápido',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Inicio Rápido',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Usa tu $biometricType para acceder rápidamente',
-              style: const TextStyle(fontSize: 15, color: AppTheme.muted),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Usa tu $biometricType para acceder rápidamente',
+                style: const TextStyle(fontSize: 15, color: AppTheme.muted),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: AppTheme.primary, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Toca "Usar Biometría" para continuar',
-                      style: TextStyle(fontSize: 13, color: AppTheme.primary.withValues(alpha: 0.8)),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        color: AppTheme.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Toca "Usar Biometría" para continuar',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.primary.withValues(alpha: 0.8)),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Usar Contraseña',
+                  style: TextStyle(color: AppTheme.muted)),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.fingerprint, size: 20),
+              label: const Text('Usar Biometría'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Usar Contraseña', style: TextStyle(color: AppTheme.muted)),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Icons.fingerprint, size: 20),
-            label: const Text('Usar Biometría'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ],
       ),
     );
 
@@ -185,6 +194,7 @@ class _AuthCheckerState extends State<AuthChecker> {
     if (result == true) {
       await _authenticateWithBiometric();
     } else {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
@@ -194,26 +204,12 @@ class _AuthCheckerState extends State<AuthChecker> {
   Future<void> _authenticateWithBiometric() async {
     try {
       print('🔐 Iniciando autenticación biométrica...');
-      
-      // Mostrar un indicador de carga
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(color: AppTheme.primary),
-          ),
-        );
-      }
-      
+
       final authenticated = await BiometricService.authenticate(
         localizedReason: 'Autentícate para acceder a la aplicación',
       );
 
       print('🔐 Resultado de autenticación: $authenticated');
-
-      // Cerrar el indicador de carga
-      if (mounted) Navigator.of(context).pop();
 
       if (!mounted) return;
 
@@ -233,11 +229,11 @@ class _AuthCheckerState extends State<AuthChecker> {
         } else {
           print('❌ No se encontraron credenciales guardadas');
           if (!mounted) return;
-          
+
           // Mostrar mensaje más descriptivo
           await showDialog(
             context: context,
-            builder: (ctx) => AlertDialog(
+            builder: (dialogContext) => AlertDialog(
               title: const Row(
                 children: [
                   Icon(Icons.error_outline, color: AppTheme.destructive),
@@ -251,13 +247,13 @@ class _AuthCheckerState extends State<AuthChecker> {
               ),
               actions: [
                 ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
                   child: const Text('Entendido'),
                 ),
               ],
             ),
           );
-          
+
           if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -267,33 +263,20 @@ class _AuthCheckerState extends State<AuthChecker> {
         print('❌ Autenticación biométrica cancelada o fallida');
         // Autenticación fallida o cancelada
         if (!mounted) return;
-        
-        // Mostrar mensaje
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Autenticación cancelada'),
-            backgroundColor: AppTheme.muted,
-          ),
-        );
-        
+
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
       }
     } catch (e) {
       print('❌ Error en autenticación biométrica: $e');
-      
-      // Cerrar el indicador de carga si está abierto
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-      
+
       if (!mounted) return;
-      
+
       // Mostrar error detallado
       await showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: const Row(
             children: [
               Icon(Icons.error_outline, color: AppTheme.destructive),
@@ -306,13 +289,13 @@ class _AuthCheckerState extends State<AuthChecker> {
           ),
           actions: [
             ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Entendido'),
             ),
           ],
         ),
       );
-      
+
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -323,7 +306,7 @@ class _AuthCheckerState extends State<AuthChecker> {
   Future<void> _loginWithCredentials(String email, String password) async {
     try {
       print('🔐 Intentando login con: $email');
-      
+
       final response = await ApiService.post(
         ApiConstants.login,
         {'correo': email, 'contrasena': password},
@@ -336,12 +319,13 @@ class _AuthCheckerState extends State<AuthChecker> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         // Extraer datos con manejo de nulos
         final token = data['token'] as String?;
         final role = (data['rol'] ?? data['role'] ?? 'Usuario') as String;
         final userId = (data['id'] ?? data['userId'] ?? 0) as int;
-        final userName = (data['nombre'] ?? data['name'] ?? 'Usuario') as String;
+        final userName =
+            (data['nombre'] ?? data['name'] ?? 'Usuario') as String;
 
         print('✅ Login exitoso');
         print('   - Token: ${token != null ? "✅" : "❌"}');
@@ -352,7 +336,6 @@ class _AuthCheckerState extends State<AuthChecker> {
         if (token == null || token.isEmpty) {
           print('❌ Token es null o vacío');
           if (!mounted) return;
-          _showError('Error: No se recibió token del servidor');
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
@@ -369,7 +352,6 @@ class _AuthCheckerState extends State<AuthChecker> {
       } else {
         print('❌ Credenciales inválidas - Status: ${response.statusCode}');
         if (!mounted) return;
-        _showError('Credenciales inválidas');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
@@ -378,23 +360,10 @@ class _AuthCheckerState extends State<AuthChecker> {
       print('❌ Error en login: $e');
       print('❌ Stack trace: $stackTrace');
       if (!mounted) return;
-      _showError('Error al iniciar sesión: ${e.toString()}');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.destructive,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
   }
 
   void _navigateToHome(String? role) {
@@ -416,22 +385,11 @@ class _AuthCheckerState extends State<AuthChecker> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              color: AppTheme.primary,
-            ),
-            if (_showBiometricOption) ...[
-              const SizedBox(height: 24),
-              const Text(
-                'Preparando autenticación biométrica...',
-                style: TextStyle(color: AppTheme.muted, fontSize: 14),
-              ),
-            ],
-          ],
+    return const Material(
+      color: Colors.white,
+      child: Center(
+        child: CircularProgressIndicator(
+          color: AppTheme.primary,
         ),
       ),
     );
@@ -458,7 +416,7 @@ class _MainNavigatorState extends State<MainNavigator>
   late final Animation<double> _progress;
 
   final List<Widget> _screens = [
-    const DashboardScreen(),
+    const ResponsiveDashboard(),
     AppointmentsScreen(),
     SaleScreen(),
     const ServicesScreen(),
@@ -547,15 +505,29 @@ class _AnimatedBottomNav extends StatefulWidget {
 
 class _AnimatedBottomNavState extends State<_AnimatedBottomNav>
     with TickerProviderStateMixin {
-
-  static const _labels = ['Inicio', 'Citas', 'Ventas', 'Servicios', 'Clientes', 'Perfil'];
+  static const _labels = [
+    'Inicio',
+    'Citas',
+    'Ventas',
+    'Servicios',
+    'Clientes',
+    'Perfil'
+  ];
   static const _activeIcons = [
-    Icons.home_rounded, Icons.calendar_month, Icons.attach_money,
-    Icons.spa, Icons.groups, Icons.person,
+    Icons.home_rounded,
+    Icons.calendar_month,
+    Icons.attach_money,
+    Icons.spa,
+    Icons.groups,
+    Icons.person,
   ];
   static const _inactiveIcons = [
-    Icons.home_outlined, Icons.calendar_month_outlined, Icons.money_outlined,
-    Icons.spa_outlined, Icons.groups_outlined, Icons.person_outline,
+    Icons.home_outlined,
+    Icons.calendar_month_outlined,
+    Icons.money_outlined,
+    Icons.spa_outlined,
+    Icons.groups_outlined,
+    Icons.person_outline,
   ];
 
   // Un controller por tab para el bounce del icono
@@ -589,9 +561,9 @@ class _AnimatedBottomNavState extends State<_AnimatedBottomNav>
     // Spring bounce en el icono seleccionado
     final spring = SpringSimulation(
       const SpringDescription(mass: 1.0, stiffness: 400.0, damping: 14.0),
-      1.3,   // empieza grande (overshoot)
-      1.0,   // vuelve a tamanio normal
-      -8.0,  // velocidad inicial negativa = rebote hacia abajo primero
+      1.3, // empieza grande (overshoot)
+      1.0, // vuelve a tamanio normal
+      -8.0, // velocidad inicial negativa = rebote hacia abajo primero
     );
 
     _bounceControllers[i].animateWith(spring);
@@ -605,7 +577,9 @@ class _AnimatedBottomNavState extends State<_AnimatedBottomNav>
 
   @override
   void dispose() {
-    for (final c in _bounceControllers) { c.dispose(); }
+    for (final c in _bounceControllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -656,15 +630,14 @@ class _AnimatedBottomNavState extends State<_AnimatedBottomNav>
                       AnimatedBuilder(
                         animation: _bounceControllers[i],
                         builder: (_, __) {
-                          final scale = selected
-                              ? _scaleAnims[i].value
-                              : 1.0;
+                          final scale = selected ? _scaleAnims[i].value : 1.0;
                           return Transform.scale(
                             scale: scale,
                             child: Icon(
                               selected ? _activeIcons[i] : _inactiveIcons[i],
                               size: 22,
-                              color: selected ? AppTheme.primary : AppTheme.muted,
+                              color:
+                                  selected ? AppTheme.primary : AppTheme.muted,
                             ),
                           );
                         },
@@ -674,7 +647,8 @@ class _AnimatedBottomNavState extends State<_AnimatedBottomNav>
                         duration: const Duration(milliseconds: 200),
                         style: TextStyle(
                           fontSize: 10,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w400,
                           color: selected ? AppTheme.primary : AppTheme.muted,
                         ),
                         child: Text(_labels[i]),
@@ -961,13 +935,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Builder(
       builder: (context) {
         final topPadding = MediaQuery.of(context).padding.top;
+        final isSmall = context.isSmallMobile;
+
         return Container(
-          padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 28),
-          decoration: const BoxDecoration(
+          padding: EdgeInsets.fromLTRB(
+            context.horizontalPadding,
+            topPadding + context.verticalPadding,
+            context.horizontalPadding,
+            context.spacing(28),
+          ),
+          decoration: BoxDecoration(
             color: AppTheme.primary,
             borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(24),
+              bottomLeft: Radius.circular(context.borderRadius(24)),
+              bottomRight: Radius.circular(context.borderRadius(24)),
             ),
           ),
           child: Row(
@@ -978,34 +959,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text(
                       '$greeting,',
-                      style: const TextStyle(
-                        fontSize: 13,
+                      style: TextStyle(
+                        fontSize: context.fontSize(13),
                         color: Colors.white70,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: context.spacing(4)),
                     Text(
                       _userName.isNotEmpty ? _userName : 'Usuario',
-                      style: const TextStyle(
-                        fontSize: 22,
+                      style: TextStyle(
+                        fontSize: context.fontSize(isSmall ? 18 : 22),
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
                       overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: context.spacing(6)),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 3),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.spacing(10),
+                        vertical: context.spacing(3),
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius:
+                            BorderRadius.circular(context.borderRadius(20)),
                       ),
                       child: Text(
                         rolLabel,
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: TextStyle(
+                          fontSize: context.fontSize(12),
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1014,10 +999,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: context.spacing(12)),
               Container(
-                width: 50,
-                height: 50,
+                width: context.scale(50),
+                height: context.scale(50),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
@@ -1027,9 +1012,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Center(
                   child: Text(
                     initials,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: context.fontSize(18),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1043,46 +1028,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildPromoCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppTheme.card,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
-                shape: BoxShape.circle),
-            child: const Icon(Icons.trending_up,
-                color: AppTheme.primary, size: 24),
+    return Builder(
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(context.spacing(18)),
+          decoration: BoxDecoration(
+            color: AppTheme.card,
+            borderRadius: BorderRadius.circular(context.borderRadius(18)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3))
+            ],
           ),
-          const SizedBox(width: 15),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Bienvenido al Dashboard",
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                SizedBox(height: 4),
-                Text(
-                  "Gestiona tu negocio desde aquí",
-                  style: TextStyle(fontSize: 13, color: AppTheme.muted),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(context.spacing(10)),
+                decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle),
+                child: Icon(Icons.trending_up,
+                    color: AppTheme.primary, size: context.iconSize(24)),
+              ),
+              SizedBox(width: context.spacing(15)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Bienvenido al Dashboard",
+                        style: TextStyle(
+                            fontSize: context.fontSize(16),
+                            fontWeight: FontWeight.w600)),
+                    SizedBox(height: context.spacing(4)),
+                    Text(
+                      "Gestiona tu negocio desde aquí",
+                      style: TextStyle(
+                          fontSize: context.fontSize(13),
+                          color: AppTheme.muted),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          )
-        ],
-      ),
+              )
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -4,6 +4,7 @@ import '../../core/services/api_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
+import '../../core/utils/responsive_utils.dart';
 import '../../core/models/client_model.dart';
 
 class ClientScreen extends StatefulWidget {

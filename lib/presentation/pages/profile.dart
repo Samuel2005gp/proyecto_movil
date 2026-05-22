@@ -7,6 +7,7 @@ import '../../core/services/biometric_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
+import '../../core/utils/responsive_utils.dart';
 import '../../core/models/user_model.dart';
 import 'login.dart';
 
@@ -190,10 +191,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           MaterialPageRoute(
                               builder: (_) =>
                                   ChangePasswordScreen(userId: _user!.id)))),
-                  
+
                   // Opción de autenticación biométrica
                   if (_biometricAvailable) _buildBiometricToggle(),
-                  
+
                   const SizedBox(height: 32),
                   _buildLogoutButton(),
                 ],
@@ -309,7 +310,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: AppTheme.card,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6)
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05), blurRadius: 6)
           ]),
       child: Row(children: [
         Container(
@@ -317,15 +319,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: BoxDecoration(
                 color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.fingerprint, color: AppTheme.primary, size: 22)),
+            child: const Icon(Icons.fingerprint,
+                color: AppTheme.primary, size: 22)),
         const SizedBox(width: 14),
         const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Acceso Biométrico', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              Text('Acceso Biométrico',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
               SizedBox(height: 2),
-              Text('Huella o reconocimiento facial', style: TextStyle(fontSize: 12, color: AppTheme.muted)),
+              Text('Huella o reconocimiento facial',
+                  style: TextStyle(fontSize: 12, color: AppTheme.muted)),
             ],
           ),
         ),
@@ -342,10 +347,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (value) {
       // Habilitar biometría
       final biometricType = await BiometricService.getBiometricTypeMessage();
-      
+
       // Solicitar credenciales para guardar
       final credentials = await _showCredentialsDialog();
-      
+
       if (credentials == null) {
         // Usuario canceló
         return;
@@ -354,42 +359,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Verificar credenciales con el servidor
       try {
         print('🔐 Verificando credenciales: ${credentials['email']}');
-        
-        // Mostrar indicador de carga
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(color: AppTheme.primary),
-          ),
-        );
-        
+
         final response = await ApiService.post(
           ApiConstants.login,
-          {'correo': credentials['email'], 'contrasena': credentials['password']},
+          {
+            'correo': credentials['email'],
+            'contrasena': credentials['password']
+          },
         );
 
         print('🔐 Respuesta del servidor: ${response.statusCode}');
 
-        // Cerrar indicador de carga
-        if (mounted) Navigator.of(context).pop();
+        if (!mounted) return;
 
         if (response.statusCode == 200) {
           // Guardar credenciales y habilitar
           print('🔐 Credenciales correctas, guardando...');
-          
+
           await StorageService.saveBiometricCredentials(
             credentials['email']!,
             credentials['password']!,
           );
           await StorageService.setBiometricEnabled(true);
-          
+
           // Verificar que se guardaron
           final savedEmail = await StorageService.getBiometricEmail();
           final savedPassword = await StorageService.getBiometricPassword();
-          print('🔐 Guardado - Email: ${savedEmail != null ? "✅" : "❌"}, Password: ${savedPassword != null ? "✅" : "❌"}');
-          
+          print(
+              '🔐 Guardado - Email: ${savedEmail != null ? "✅" : "❌"}, Password: ${savedPassword != null ? "✅" : "❌"}');
+
           if (mounted) {
             setState(() => _biometricEnabled = true);
             SnackBarHelper.showSuccess(
@@ -400,19 +398,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         } else {
           print('❌ Credenciales incorrectas');
           if (mounted) {
-            SnackBarHelper.showError(context, 'Credenciales incorrectas. Verifica tu correo y contraseña.');
+            SnackBarHelper.showError(context,
+                'Credenciales incorrectas. Verifica tu correo y contraseña.');
           }
         }
       } catch (e) {
         print('❌ Error al verificar credenciales: $e');
-        
-        // Cerrar indicador de carga si está abierto
-        if (mounted) {
-          try {
-            Navigator.of(context).pop();
-          } catch (_) {}
-        }
-        
+
         if (mounted) {
           SnackBarHelper.showError(context, 'Error al verificar credenciales');
         }
@@ -423,7 +415,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Deshabilitar Acceso Biométrico'),
-          content: const Text('¿Estás seguro de que deseas deshabilitar el acceso biométrico?'),
+          content: const Text(
+              '¿Estás seguro de que deseas deshabilitar el acceso biométrico?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -431,7 +424,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Deshabilitar', style: TextStyle(color: AppTheme.destructive)),
+              child: const Text('Deshabilitar',
+                  style: TextStyle(color: AppTheme.destructive)),
             ),
           ],
         ),
@@ -441,7 +435,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await StorageService.clearBiometricCredentials();
         await StorageService.setBiometricEnabled(false);
         setState(() => _biometricEnabled = false);
-        
+
         if (!mounted) return;
         SnackBarHelper.showSuccess(context, 'Acceso biométrico deshabilitado');
       }
@@ -449,75 +443,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<Map<String, String>?> _showCredentialsDialog() async {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    bool showPassword = false;
-
     return showDialog<Map<String, String>>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Confirmar Credenciales'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Ingresa tus credenciales para habilitar el acceso biométrico',
-                style: TextStyle(fontSize: 14, color: AppTheme.muted),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Correo electrónico',
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: passwordController,
-                obscureText: !showPassword,
-                decoration: InputDecoration(
-                  labelText: 'Contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(showPassword ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setDialogState(() => showPassword = !showPassword),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                emailController.dispose();
-                passwordController.dispose();
-                Navigator.pop(ctx, null);
-              },
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final email = emailController.text.trim();
-                final password = passwordController.text.trim();
-                emailController.dispose();
-                passwordController.dispose();
-                
-                if (email.isEmpty || password.isEmpty) {
-                  SnackBarHelper.showError(context, 'Completa todos los campos');
-                  return;
-                }
-                
-                Navigator.pop(ctx, {'email': email, 'password': password});
-              },
-              child: const Text('Confirmar'),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) => const _CredentialsDialog(),
     );
   }
 }
@@ -886,6 +815,94 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           : const Text('Actualizar Contraseña'))),
             ])),
       ),
+    );
+  }
+}
+
+// DIALOGO DE CREDENCIALES PARA BIOMETRIA
+class _CredentialsDialog extends StatefulWidget {
+  const _CredentialsDialog();
+
+  @override
+  State<_CredentialsDialog> createState() => _CredentialsDialogState();
+}
+
+class _CredentialsDialogState extends State<_CredentialsDialog> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _showPassword = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _onConfirm() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Completa todos los campos'),
+          backgroundColor: AppTheme.destructive,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop({'email': email, 'password': password});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Confirmar Credenciales'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Ingresa tus credenciales para habilitar el acceso biométrico',
+            style: TextStyle(fontSize: 14, color: AppTheme.muted),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Correo electrónico',
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            decoration: InputDecoration(
+              labelText: 'Contraseña',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility),
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _onConfirm,
+          child: const Text('Confirmar'),
+        ),
+      ],
     );
   }
 }

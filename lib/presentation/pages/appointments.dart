@@ -7,6 +7,7 @@ import '../../core/services/storage_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
+import '../../core/utils/responsive_utils.dart';
 import '../../core/models/appointment_model.dart';
 import 'create_appointment.dart';
 
@@ -302,45 +303,54 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final topPadding = MediaQuery.of(context).padding.top;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.fromLTRB(
+        context.horizontalPadding,
+        topPadding + context.verticalPadding,
+        context.horizontalPadding,
+        context.spacing(24),
+      ),
+      decoration: BoxDecoration(
         color: AppTheme.primary,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          bottomLeft: Radius.circular(context.borderRadius(24)),
+          bottomRight: Radius.circular(context.borderRadius(24)),
         ),
       ),
       child: Row(children: [
         Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Citas',
+            Text('Citas',
                 style: TextStyle(
-                    fontSize: 22,
+                    fontSize: context.fontSize(22),
                     fontWeight: FontWeight.bold,
                     color: Colors.white)),
-            const SizedBox(height: 4),
+            SizedBox(height: context.spacing(4)),
             Text(
               isToday
                   ? 'Hoy, ${DateFormat('dd/MM/yyyy').format(_selectedDay!)}'
                   : DateFormat('dd/MM/yyyy').format(_selectedDay!),
-              style: const TextStyle(fontSize: 13, color: Colors.white70),
+              style: TextStyle(
+                  fontSize: context.fontSize(13), color: Colors.white70),
             ),
           ]),
         ),
         if (count > 0)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.spacing(14),
+              vertical: context.spacing(8),
+            ),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(context.borderRadius(20)),
             ),
             child: Text(
               '$count ${count == 1 ? 'cita' : 'citas'}',
-              style: const TextStyle(
+              style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 13),
+                  fontSize: context.fontSize(13)),
             ),
           ),
       ]),
@@ -567,10 +577,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final statusIcon = _getStatusIcon(appointment.estado);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: context.spacing(12)),
       decoration: BoxDecoration(
         color: statusBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.borderRadius(16)),
         border: Border(left: BorderSide(color: statusColor, width: 4)),
         boxShadow: [
           BoxShadow(
@@ -580,23 +590,26 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(context.spacing(14)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             // Hora destacada
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                horizontal: context.spacing(10),
+                vertical: context.spacing(6),
+              ),
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(context.borderRadius(8)),
               ),
               child: Text(appointment.horario,
                   style: TextStyle(
                       color: statusColor,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14)),
+                      fontSize: context.fontSize(14))),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: context.spacing(8)),
             Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -605,59 +618,82 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     appointment.clienteNombre.isNotEmpty
                         ? appointment.clienteNombre
                         : 'Cliente',
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: context.fontSize(15),
+                        fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                   Text(appointment.servicioNombre,
-                      style:
-                          const TextStyle(fontSize: 12, color: AppTheme.muted),
-                      overflow: TextOverflow.ellipsis),
+                      style: TextStyle(
+                          fontSize: context.fontSize(12),
+                          color: AppTheme.muted),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1),
                 ])),
-            // Badge de estado
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
+            SizedBox(width: context.spacing(4)),
+            // Badge de estado - Flexible para evitar overflow
+            Flexible(
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.spacing(6),
+                  vertical: context.spacing(4),
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(context.borderRadius(20)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(statusIcon,
+                      size: context.iconSize(11), color: statusColor),
+                  SizedBox(width: context.spacing(3)),
+                  Flexible(
+                    child: Text(appointment.estado,
+                        style: TextStyle(
+                            color: statusColor,
+                            fontSize: context.fontSize(10),
+                            fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1),
+                  ),
+                ]),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(statusIcon, size: 12, color: statusColor),
-                const SizedBox(width: 4),
-                Text(appointment.estado,
-                    style: TextStyle(
-                        color: statusColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold)),
-              ]),
             ),
           ]),
           if (appointment.empleadoNombre.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: context.spacing(8)),
             Row(children: [
-              const Icon(Icons.person_outline, size: 13, color: AppTheme.muted),
-              const SizedBox(width: 4),
-              Text(appointment.empleadoNombre,
-                  style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
+              Icon(Icons.person_outline,
+                  size: context.iconSize(13), color: AppTheme.muted),
+              SizedBox(width: context.spacing(4)),
+              Expanded(
+                child: Text(appointment.empleadoNombre,
+                    style: TextStyle(
+                        fontSize: context.fontSize(12), color: AppTheme.muted),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1),
+              ),
             ]),
           ],
           if (appointment.notas != null && appointment.notas!.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            SizedBox(height: context.spacing(6)),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Icon(Icons.notes_rounded, size: 13, color: AppTheme.muted),
-              const SizedBox(width: 4),
+              Icon(Icons.notes_rounded,
+                  size: context.iconSize(13), color: AppTheme.muted),
+              SizedBox(width: context.spacing(4)),
               Expanded(
                   child: Text(appointment.notas!,
-                      style:
-                          const TextStyle(fontSize: 12, color: AppTheme.muted),
+                      style: TextStyle(
+                          fontSize: context.fontSize(12),
+                          color: AppTheme.muted),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis)),
             ]),
           ],
           if (appointment.estado == 'Pendiente' || _userRole == 'Admin') ...[
-            const SizedBox(height: 10),
+            SizedBox(height: context.spacing(10)),
             const Divider(height: 1),
-            const SizedBox(height: 6),
+            SizedBox(height: context.spacing(6)),
             Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               if (appointment.estado == 'Pendiente') ...[
                 _actionBtn(Icons.remove_red_eye_outlined, 'Ver',
@@ -682,10 +718,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       IconData icon, String label, Color color, VoidCallback onTap) {
     return TextButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 16, color: color),
-      label: Text(label, style: TextStyle(color: color, fontSize: 12)),
+      icon: Icon(icon, size: context.iconSize(16), color: color),
+      label: Text(label,
+          style: TextStyle(color: color, fontSize: context.fontSize(12))),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.spacing(8),
+          vertical: context.spacing(4),
+        ),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),

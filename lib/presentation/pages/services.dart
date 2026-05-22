@@ -7,6 +7,7 @@ import '../../core/services/storage_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
+import '../../core/utils/responsive_utils.dart';
 import 'package:http/http.dart' as http;
 
 class ServicesScreen extends StatefulWidget {
@@ -190,23 +191,29 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final topPadding = MediaQuery.of(context).padding.top;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 24),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.fromLTRB(
+        context.horizontalPadding,
+        topPadding + context.verticalPadding,
+        context.horizontalPadding,
+        context.spacing(24),
+      ),
+      decoration: BoxDecoration(
         color: AppTheme.primary,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          bottomLeft: Radius.circular(context.borderRadius(24)),
+          bottomRight: Radius.circular(context.borderRadius(24)),
         ),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Servicios',
+        Text('Servicios',
             style: TextStyle(
-                fontSize: 22,
+                fontSize: context.fontSize(22),
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
-        const SizedBox(height: 4),
+        SizedBox(height: context.spacing(4)),
         Text('${_services.length} servicios disponibles',
-            style: const TextStyle(fontSize: 13, color: Colors.white70)),
+            style: TextStyle(
+                fontSize: context.fontSize(13), color: Colors.white70)),
       ]),
     );
   }
@@ -218,11 +225,11 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final id = service['id'] as int? ?? 0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: context.spacing(14)),
+      padding: EdgeInsets.all(context.spacing(16)),
       decoration: BoxDecoration(
         color: AppTheme.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.borderRadius(16)),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -232,48 +239,58 @@ class _ServicesScreenState extends State<ServicesScreen> {
       ),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(context.spacing(10)),
           decoration: BoxDecoration(
             color: AppTheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(context.borderRadius(12)),
           ),
-          child:
-              const Icon(Icons.spa_outlined, color: AppTheme.primary, size: 24),
+          child: Icon(Icons.spa_outlined,
+              color: AppTheme.primary, size: context.iconSize(24)),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: context.spacing(12)),
         Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name,
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 2),
+                style: TextStyle(
+                    fontSize: context.fontSize(15),
+                    fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+            SizedBox(height: context.spacing(2)),
             Row(children: [
               Text('\$$price',
-                  style: const TextStyle(
-                      fontSize: 14,
+                  style: TextStyle(
+                      fontSize: context.fontSize(14),
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w600)),
               if (duration != null) ...[
-                const SizedBox(width: 10),
-                const Icon(Icons.access_time, size: 13, color: AppTheme.muted),
-                const SizedBox(width: 3),
-                Text('$duration min',
-                    style:
-                        const TextStyle(fontSize: 12, color: AppTheme.muted)),
+                SizedBox(width: context.spacing(8)),
+                Icon(Icons.access_time,
+                    size: context.iconSize(13), color: AppTheme.muted),
+                SizedBox(width: context.spacing(3)),
+                Flexible(
+                  child: Text('$duration min',
+                      style: TextStyle(
+                          fontSize: context.fontSize(12),
+                          color: AppTheme.muted),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1),
+                ),
               ],
             ]),
           ]),
         ),
         Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
-            icon: const Icon(Icons.remove_red_eye_outlined,
-                color: AppTheme.primary),
+            icon: Icon(Icons.remove_red_eye_outlined,
+                color: AppTheme.primary, size: context.iconSize(20)),
             onPressed: () => _viewService(service),
             tooltip: 'Ver',
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppTheme.primary),
+            icon: Icon(Icons.edit_outlined,
+                color: AppTheme.primary, size: context.iconSize(20)),
             onPressed: () async {
               final updated = await Navigator.push<bool>(
                 context,
@@ -285,7 +302,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
             tooltip: 'Editar',
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppTheme.destructive),
+            icon: Icon(Icons.delete_outline,
+                color: AppTheme.destructive, size: context.iconSize(20)),
             onPressed: () => _deleteService(id),
             tooltip: 'Eliminar',
           ),
@@ -324,7 +342,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
   Future<void> _loadCategories() async {
     try {
-      final response = await ApiService.get('${ApiConstants.categories}?all=true');
+      final response =
+          await ApiService.get('${ApiConstants.categories}?all=true');
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
@@ -369,7 +388,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         'POST',
         Uri.parse('${ApiConstants.baseUrl}/upload/image'),
       );
-      
+
       request.headers['Authorization'] = 'Bearer $token';
       request.files.add(
         await http.MultipartFile.fromPath('image', _selectedImage!.path),
@@ -386,7 +405,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       }
     } catch (e) {
       if (mounted) {
-        SnackBarHelper.showError(context, 'Error al subir imagen: ${e.toString()}');
+        SnackBarHelper.showError(
+            context, 'Error al subir imagen: ${e.toString()}');
       }
       return null;
     }
@@ -529,7 +549,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.image_outlined, color: AppTheme.primary),
+                            const Icon(Icons.image_outlined,
+                                color: AppTheme.primary),
                             const SizedBox(width: 8),
                             const Text(
                               'Imagen del servicio',
@@ -629,27 +650,30 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         text: widget.service['description'] ??
             widget.service['descripcion'] ??
             '');
-    
+
     _currentImageUrl = widget.service['imagen'] ?? widget.service['image'];
-    
+
     // Obtener el categoryId del servicio
-    _selectedCategoryId = widget.service['categoryId'] ?? widget.service['FK_categoria_servicios'];
-    
+    _selectedCategoryId = widget.service['categoryId'] ??
+        widget.service['FK_categoria_servicios'];
+
     _loadCategories();
   }
 
   Future<void> _loadCategories() async {
     try {
-      final response = await ApiService.get('${ApiConstants.categories}?all=true');
+      final response =
+          await ApiService.get('${ApiConstants.categories}?all=true');
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
           _categories = data.cast<Map<String, dynamic>>();
           _loadingCategories = false;
-          
+
           // Si no tenemos categoryId pero tenemos el nombre de la categoría, buscarla
           if (_selectedCategoryId == null) {
-            final categoryName = widget.service['category'] ?? widget.service['categoria'];
+            final categoryName =
+                widget.service['category'] ?? widget.service['categoria'];
             if (categoryName != null) {
               final cat = _categories.firstWhere(
                 (c) => (c['nombre'] ?? c['name']) == categoryName,
@@ -699,7 +723,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         'POST',
         Uri.parse('${ApiConstants.baseUrl}/upload/image'),
       );
-      
+
       request.headers['Authorization'] = 'Bearer $token';
       request.files.add(
         await http.MultipartFile.fromPath('image', _selectedImage!.path),
@@ -716,7 +740,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
       }
     } catch (e) {
       if (mounted) {
-        SnackBarHelper.showError(context, 'Error al subir imagen: ${e.toString()}');
+        SnackBarHelper.showError(
+            context, 'Error al subir imagen: ${e.toString()}');
       }
       return null;
     }
@@ -859,7 +884,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.image_outlined, color: AppTheme.primary),
+                            const Icon(Icons.image_outlined,
+                                color: AppTheme.primary),
                             const SizedBox(width: 8),
                             const Text(
                               'Imagen del servicio',
@@ -882,7 +908,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                        ] else if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) ...[
+                        ] else if (_currentImageUrl != null &&
+                            _currentImageUrl!.isNotEmpty) ...[
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
@@ -895,7 +922,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                                       height: 150,
                                       child: Center(
                                           child: Icon(Icons.error_outline,
-                                              size: 40, color: AppTheme.muted))),
+                                              size: 40,
+                                              color: AppTheme.muted))),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -907,7 +935,8 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                             icon: Icon(_selectedImage == null
                                 ? Icons.add_photo_alternate
                                 : Icons.change_circle),
-                            label: Text(_selectedImage == null && _currentImageUrl == null
+                            label: Text(_selectedImage == null &&
+                                    _currentImageUrl == null
                                 ? 'Seleccionar imagen'
                                 : 'Cambiar imagen'),
                             style: OutlinedButton.styleFrom(
