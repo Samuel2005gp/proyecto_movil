@@ -857,17 +857,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _buildStatsGrid(),
                     const SizedBox(height: 25),
                     const Text(
-                      "Accesos Rápidos",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppTheme.muted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildQuickActions(context),
-                    const SizedBox(height: 25),
-                    const Text(
                       "Próximas Citas",
                       style: TextStyle(
                         fontSize: 17,
@@ -967,7 +956,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     SizedBox(height: context.spacing(4)),
                     Text(
-                      _userName.isNotEmpty ? _userName : 'Usuario',
+                      parts.isNotEmpty ? parts[0] : 'Usuario',
                       style: TextStyle(
                         fontSize: context.fontSize(isSmall ? 18 : 22),
                         fontWeight: FontWeight.w700,
@@ -1134,88 +1123,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           )
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.card,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _buildQuickBtn(context, Icons.calendar_month, "Citas", 1),
-              const SizedBox(width: 16),
-              _buildQuickBtn(context, Icons.attach_money, "Ventas", 2),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildQuickBtn(context, Icons.spa_outlined, "Servicios", 3),
-              const SizedBox(width: 16),
-              _buildQuickBtn(context, Icons.groups, "Clientes", 4),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickBtn(
-      BuildContext context, IconData icon, String label, int index) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          final nav = context.findAncestorStateOfType<_MainNavigatorState>();
-          nav?.setState(() => nav._index = index);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 20, color: AppTheme.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.foreground,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

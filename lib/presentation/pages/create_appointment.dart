@@ -274,10 +274,10 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                            color: AppTheme.colorPurple.withOpacity(0.1),
+                            color: AppTheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10)),
-                        child: const Icon(Icons.calendar_month,
-                            color: AppTheme.colorPurple),
+                        child: const Icon(Icons.event_note_rounded,
+                            color: AppTheme.primary),
                       ),
                       const SizedBox(width: 12),
                       const Column(

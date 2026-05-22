@@ -189,17 +189,6 @@ class _ResponsiveDashboardState extends State<ResponsiveDashboard> {
                     _buildStatsGrid(),
                     SizedBox(height: context.spacing(25)),
                     Text(
-                      "Accesos Rápidos",
-                      style: TextStyle(
-                        fontSize: context.fontSize(16),
-                        color: AppTheme.muted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: context.spacing(10)),
-                    _buildQuickActions(),
-                    SizedBox(height: context.spacing(25)),
-                    Text(
                       "Próximas Citas",
                       style: TextStyle(
                         fontSize: context.fontSize(17),
@@ -298,7 +287,7 @@ class _ResponsiveDashboardState extends State<ResponsiveDashboard> {
                 ),
                 SizedBox(height: context.spacing(4)),
                 Text(
-                  _userName.isNotEmpty ? _userName : 'Usuario',
+                  parts.isNotEmpty ? parts[0] : 'Usuario',
                   style: TextStyle(
                     fontSize: context.fontSize(isSmall ? 18 : 22),
                     fontWeight: FontWeight.w700,
@@ -467,102 +456,6 @@ class _ResponsiveDashboardState extends State<ResponsiveDashboard> {
             ),
           )
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Container(
-      padding: EdgeInsets.all(context.spacing(20)),
-      decoration: BoxDecoration(
-        color: AppTheme.card,
-        borderRadius: BorderRadius.circular(context.borderRadius(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _buildQuickBtn(Icons.calendar_month, "Citas", 1),
-              SizedBox(width: context.spacing(16)),
-              _buildQuickBtn(Icons.attach_money, "Ventas", 2),
-            ],
-          ),
-          SizedBox(height: context.spacing(16)),
-          Row(
-            children: [
-              _buildQuickBtn(Icons.spa_outlined, "Servicios", 3),
-              SizedBox(width: context.spacing(16)),
-              _buildQuickBtn(Icons.groups, "Clientes", 4),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickBtn(IconData icon, String label, int index) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          // Navegar al índice correspondiente
-          final nav = context.findAncestorStateOfType<State>();
-          if (nav != null && nav.mounted) {
-            // Buscar el MainNavigatorState
-            context.visitAncestorElements((element) {
-              if (element.widget.toString().contains('MainNavigator')) {
-                final state = element as StatefulElement;
-                (state.state as dynamic)._onTabTapped(index);
-                return false;
-              }
-              return true;
-            });
-          }
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: context.spacing(16),
-            horizontal: context.spacing(12),
-          ),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(context.borderRadius(16)),
-            border: Border.all(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(context.spacing(10)),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(context.borderRadius(12)),
-                ),
-                child: Icon(icon,
-                    size: context.iconSize(20), color: AppTheme.primary),
-              ),
-              SizedBox(width: context.spacing(12)),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: context.fontSize(14),
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.foreground,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
