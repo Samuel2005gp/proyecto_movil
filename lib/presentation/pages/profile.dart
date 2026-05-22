@@ -191,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           context,
                           MaterialPageRoute(
                               builder: (_) =>
-                                  ChangePasswordScreen(userId: _user!.id)))),
+                                  const ChangePasswordScreen()))),
 
                   // Opción de autenticación biométrica
                   if (_biometricAvailable) _buildBiometricToggle(),
@@ -705,8 +705,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
 // CAMBIAR CONTRASENA
 class ChangePasswordScreen extends StatefulWidget {
-  final int userId;
-  const ChangePasswordScreen({super.key, required this.userId});
+  const ChangePasswordScreen({super.key});
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
@@ -733,27 +732,32 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
     try {
-      final response = await ApiService.put(
-          ApiConstants.userDetail(widget.userId),
-          {'currentPassword': _currentCtrl.text, 'newPassword': _newCtrl.text});
+      final response = await ApiService.post(
+        ApiConstants.changePassword,
+        {
+          'contrasenaActual': _currentCtrl.text,
+          'nuevaPassword': _newCtrl.text,
+        },
+      );
       if (response.statusCode == 200) {
         if (!mounted) return;
-        SnackBarHelper.showSuccess(context, 'Contraseña actualizada');
+        SnackBarHelper.showSuccess(context, 'Contraseña actualizada correctamente');
         Navigator.pop(context);
       } else {
         String errorMsg = 'Error ${response.statusCode}';
         try {
           final error = jsonDecode(response.body);
-          errorMsg = error['message']?.toString() ?? errorMsg;
+          errorMsg = error['error']?.toString() ??
+              error['message']?.toString() ??
+              errorMsg;
         } catch (_) {}
         if (!mounted) return;
         SnackBarHelper.showError(context, errorMsg);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: AppTheme.destructive));
+      SnackBarHelper.showError(
+          context, e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
