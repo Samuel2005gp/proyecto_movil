@@ -116,22 +116,30 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 60),
 
-              // ── Ícono de la app ──────────────────────────────────────
+              // ── Logo de la app ───────────────────────────────────────
               Container(
-                width: 100,
-                height: 100,
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary,
                   shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFEAD8B1), width: 3),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primary.withValues(alpha: 0.3),
-                      blurRadius: 20,
+                      color: AppTheme.primary.withValues(alpha: 0.35),
+                      blurRadius: 24,
+                      spreadRadius: 2,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                child: const Icon(Icons.spa, size: 52, color: Colors.white),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/Logo.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
               const SizedBox(height: 40),
 
