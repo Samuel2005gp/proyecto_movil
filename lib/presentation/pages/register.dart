@@ -81,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _validateNombre(String? v) {
     if (v == null || v.trim().isEmpty) return 'El nombre es requerido';
     if (v.trim().length < 2) return 'Mínimo 2 caracteres';
-    if (v.trim().length > 50) return 'Máximo 50 caracteres';
+    if (v.trim().length > 40) return 'Máximo 40 caracteres';
     if (!RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$").hasMatch(v.trim())) {
       return 'Solo se permiten letras';
     }
@@ -91,7 +91,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _validateApellido(String? v) {
     if (v == null || v.trim().isEmpty) return 'El apellido es requerido';
     if (v.trim().length < 2) return 'Mínimo 2 caracteres';
-    if (v.trim().length > 50) return 'Máximo 50 caracteres';
+    if (v.trim().length > 40) return 'Máximo 40 caracteres';
     if (!RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$").hasMatch(v.trim())) {
       return 'Solo se permiten letras';
     }
@@ -201,6 +201,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
                             RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                        LengthLimitingTextInputFormatter(40),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Nombre *',
@@ -218,6 +219,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
                             RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+                        LengthLimitingTextInputFormatter(40),
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Apellido *',
