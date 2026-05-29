@@ -20,6 +20,8 @@ dependencies:
   local_auth: ^2.1.8
   local_auth_android: ^1.0.38
   local_auth_ios: ^1.1.7
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.0
 
 dev_dependencies:
   flutter_test:

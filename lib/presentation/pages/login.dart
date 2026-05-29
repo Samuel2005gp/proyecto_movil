@@ -4,6 +4,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import '../../core/services/api_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/services/biometric_service.dart';
+import '../../core/services/google_signin_service.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/snackbar_helper.dart';
@@ -81,6 +82,32 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       _showError('Error de conexión: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    try {
+      print('🔵 Iniciando login con Google...');
+      final result = await GoogleSignInService.signInWithGoogle();
+      
+      if (!mounted) return;
+      
+      final usuario = result['usuario'] as Map<String, dynamic>;
+      final role = usuario['rol'] ?? 'Cliente';
+      
+      print('✅ Login con Google exitoso. Rol: $role');
+      
+      // No ofrecer biometría para Google Sign-In ya que Google maneja su propia autenticación
+      _navigateToHome(role);
+      
+    } catch (e) {
+      print('❌ Error en login con Google: $e');
+      if (!mounted) return;
+      _showError('Error al iniciar sesión con Google: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -333,6 +360,60 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w700),
                         ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Divisor "O" ──────────────────────────────────────────
+              Row(
+                children: [
+                  Expanded(child: Divider(color: AppTheme.muted.withValues(alpha: 0.3))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'O',
+                      style: TextStyle(
+                        color: AppTheme.muted,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: AppTheme.muted.withValues(alpha: 0.3))),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // ── Botón Google Sign-In ──────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _loginWithGoogle,
+                  icon: Image.asset(
+                    'assets/images/google_logo.png',
+                    height: 24,
+                    width: 24,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Si no existe el logo, usar un icono
+                      return const Icon(Icons.g_mobiledata, size: 28);
+                    },
+                  ),
+                  label: const Text(
+                    'Continuar con Google',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.foreground,
+                    side: BorderSide(color: AppTheme.muted.withValues(alpha: 0.3), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

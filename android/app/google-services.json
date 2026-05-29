@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "5389038456",
+    "project_id": "highsoft-940f8",
+    "storage_bucket": "highsoft-940f8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:5389038456:android:e0cfdaf8d999f76e0e0e8d",
+        "android_client_info": {
+          "package_name": "com.highsoft.movil"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "5389038456-8t2jkk6agdi7f3qp9ptsjua4uc5h009e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.highsoft.movil",
+            "certificate_hash": "4dea1ae98698436959c65efa4c9f3d0dce05bb46"
+          }
+        },
+        {
+          "client_id": "5389038456-u7reiubg6mak2h1lthn480b855bpgia0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDP_Qi4f4HvBauVHt1QIKJHVPpTSZxyBgg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "5389038456-u7reiubg6mak2h1lthn480b855bpgia0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
