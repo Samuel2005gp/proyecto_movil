@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:intl/intl.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/api_service.dart';
@@ -319,19 +320,7 @@ class _AuthCheckerState extends State<AuthChecker> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        // Extraer datos con manejo de nulos
         final token = data['token'] as String?;
-        final role = (data['rol'] ?? data['role'] ?? 'Usuario') as String;
-        final userId = (data['id'] ?? data['userId'] ?? 0) as int;
-        final userName =
-            (data['nombre'] ?? data['name'] ?? 'Usuario') as String;
-
-        print('✅ Login exitoso');
-        print('   - Token: ${token != null ? "✅" : "❌"}');
-        print('   - Rol: $role');
-        print('   - UserId: $userId');
-        print('   - UserName: $userName');
 
         if (token == null || token.isEmpty) {
           print('❌ Token es null o vacío');
@@ -342,10 +331,29 @@ class _AuthCheckerState extends State<AuthChecker> {
           return;
         }
 
+        // 🔧 FIX: Decodificar el JWT correctamente para obtener el rol real
+        Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+        final rawRole = decodedToken['rol'] ?? decodedToken['role'] ?? '';
+        // Normalizar el rol para que siempre sea consistente
+        final role = _normalizeRole(rawRole.toString());
+        final userId = decodedToken['id'] ?? decodedToken['userId'] ?? 0;
+        // Soporta 'nombre', 'name', 'firstName' según lo que devuelva el JWT
+        final firstName = decodedToken['firstName']?.toString() ?? '';
+        final lastName = decodedToken['lastName']?.toString() ?? '';
+        final fullName = decodedToken['nombre']?.toString() ??
+            decodedToken['name']?.toString() ??
+            (firstName.isNotEmpty ? '$firstName $lastName'.trim() : 'Usuario');
+
+        print('✅ Login exitoso con huella');
+        print('   - Token: ✅');
+        print('   - Rol decodificado: $role');
+        print('   - UserId: $userId');
+        print('   - UserName: $fullName');
+
         await StorageService.saveToken(token);
         await StorageService.saveRole(role);
         await StorageService.saveUserId(userId);
-        await StorageService.saveUserName(userName);
+        await StorageService.saveUserName(fullName);
 
         if (!mounted) return;
         _navigateToHome(role);
@@ -363,6 +371,33 @@ class _AuthCheckerState extends State<AuthChecker> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
+    }
+  }
+
+  /// Normaliza el nombre del rol para que coincida con las pantallas,
+  /// independientemente de cómo esté guardado en la BD
+  String _normalizeRole(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'admin':
+      case 'administrador':
+        return 'Admin';
+      case 'cliente':
+        return 'Cliente';
+      case 'manicurista':
+        return 'Manicurista';
+      case 'estilista':
+        return 'Estilista';
+      case 'barbero':
+        return 'Barbero';
+      case 'masajista':
+        return 'Masajista';
+      case 'cosmetóloga':
+      case 'cosmetologa':
+        return 'Cosmetologa';
+      case 'empleado':
+        return 'Manicurista'; // fallback genérico de empleado
+      default:
+        return raw; // devuelve tal cual si no se reconoce
     }
   }
 
